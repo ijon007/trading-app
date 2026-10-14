@@ -2,10 +2,13 @@ import SwiftUI
 
 @main
 struct AurumApp: App {
+    @AppStorage("appearance") private var appearance: Appearance = .system
+
     var body: some Scene {
         WindowGroup {
             RootView()
                 .tint(Theme.accent)
+                .preferredColorScheme(appearance.scheme)
         }
     }
 }
