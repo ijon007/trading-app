@@ -28,14 +28,15 @@ struct ExploreView: View {
         NavigationStack {
             List {
                 if query.isEmpty {
-                    Section {
-                        gainersRow
-                            .listRowInsets(EdgeInsets())
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                    } header: {
-                        sectionTitle("Top gainers")
-                    }
+                    // Plain row, not a Section header, so it scrolls away instead of pinning.
+                    sectionTitle("Top gainers")
+                        .listRowInsets(EdgeInsets(top: Space.sm, leading: Space.md, bottom: 0, trailing: Space.md))
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                    gainersRow
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
 
                     Picker("Filter", selection: $filter) {
                         ForEach(Filter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
