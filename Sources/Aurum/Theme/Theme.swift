@@ -1,33 +1,32 @@
 import SwiftUI
+import UIKit
 
-/// Aurum colorway: obsidian blacks, warm ivory text, champagne-gold accent.
+/// Aurum colorway: pure grayscale, light and dark. Only color is gains/losses.
 enum Theme {
     // Surfaces
-    static let background = Color(hex: 0x0B0B0D)   // obsidian
-    static let surface    = Color(hex: 0x151518)   // raised card
-    static let surfaceHi  = Color(hex: 0x1F1F23)   // elevated / pressed
-    static let hairline   = Color.white.opacity(0.08)
+    static let background = Color(light: 0xF7F7F5, dark: 0x0B0B0C)
+    static let surface    = Color(light: 0xFFFFFF, dark: 0x161617)
+    static let surfaceHi  = Color(light: 0xEDEDEB, dark: 0x202022)
+    static let hairline   = Color(light: 0xE2E2E0, dark: 0x2A2A2C)
 
     // Text
-    static let textPrimary   = Color(hex: 0xF4F1EA) // ivory
-    static let textSecondary = Color(hex: 0xA19D94) // warm gray
-    static let textTertiary  = Color(hex: 0x5E5B55)
+    static let textPrimary   = Color(light: 0x0B0B0C, dark: 0xF7F7F5)
+    static let textSecondary = Color(light: 0x6B6B6E, dark: 0x9A9A9D)
+    static let textTertiary  = Color(light: 0xA3A3A6, dark: 0x5C5C5F)
 
-    // Accent
-    static let gold     = Color(hex: 0xC9A96E)      // champagne gold
-    static let goldSoft = Color(hex: 0xC9A96E).opacity(0.14)
+    // Accent = primary text (black / white)
+    static let accent = textPrimary
 
-    // Market semantics (muted, not neon)
-    static let positive = Color(hex: 0x5FB38A)
-    static let negative = Color(hex: 0xD06A5E)
+    // Market semantics (muted)
+    static let positive = Color(light: 0x2F8F5B, dark: 0x5FB38A)
+    static let negative = Color(light: 0xC0483C, dark: 0xD06A5E)
 
-    // Type: serif display for luxury headlines, SF for UI, mono for figures
-    static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .regular, design: .serif) }
+    // Type helpers (SF)
+    static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .semibold) }
     static func body(_ size: CGFloat = 16) -> Font { .system(size: size, weight: .regular) }
-    static func figure(_ size: CGFloat) -> Font { .system(size: size, weight: .medium, design: .rounded).monospacedDigit() }
+    static func figure(_ size: CGFloat) -> Font { .system(size: size, weight: .medium).monospacedDigit() }
 
-    // Shape
-    static let radius: CGFloat = 22
+    static let radius: CGFloat = Radius.lg
 }
 
 extension Color {
@@ -38,11 +37,19 @@ extension Color {
                   blue: Double(hex & 0xFF) / 255,
                   opacity: opacity)
     }
+
+    init(light: UInt32, dark: UInt32) {
+        func ui(_ h: UInt32) -> UIColor {
+            UIColor(red: CGFloat((h >> 16) & 0xFF) / 255, green: CGFloat((h >> 8) & 0xFF) / 255,
+                    blue: CGFloat(h & 0xFF) / 255, alpha: 1)
+        }
+        self.init(uiColor: UIColor { $0.userInterfaceStyle == .dark ? ui(dark) : ui(light) })
+    }
 }
 
 extension View {
     /// Standard Liquid Glass card used across Aurum.
-    func aurumGlass(radius: CGFloat = Theme.radius) -> some View {
+    func glassCard(radius: CGFloat = Theme.radius) -> some View {
         glassEffect(.regular, in: .rect(cornerRadius: radius))
     }
 }
