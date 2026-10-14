@@ -145,12 +145,11 @@ struct GainersMarquee: View {
     }
 }
 
-/// Top gainers card. Hierarchy reads top-to-bottom: identity (icon + symbol)
-/// and the change pill share the top edge, the sparkline shows the move, and the
-/// price sits large at the bottom as the anchor.
+/// Top gainers card. The gain is the hero: identity on top, the 24h change
+/// large in green or red, the sparkline for shape, and the price as quiet context.
 struct GainerCard: View {
-    static let width: CGFloat = 164
-    static let height: CGFloat = 144
+    static let width: CGFloat = 172
+    static let height: CGFloat = 148
     let asset: Asset
 
     var body: some View {
@@ -161,24 +160,31 @@ struct GainerCard: View {
                 Text(asset.symbol)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
-                Spacer(minLength: Space.xxs)
-                ChangePill(value: asset.change24h, compact: true)
+                    .fixedSize()
+                Text(asset.name)
+                    .font(Typo.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
-            Sparkline(values: asset.sparkline)
-                .stroke(tint, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                .frame(height: 30)
-                .padding(.vertical, Space.sm)
-            Spacer(minLength: 0)
-            Text(asset.price.fiat)
-                .font(.system(size: 20, weight: .semibold).monospacedDigit())
+            Text(asset.change24h.percent)
+                .font(.system(size: 22, weight: .semibold).monospacedDigit())
                 .tracking(-0.4)
-                .foregroundStyle(Theme.textPrimary)
+                .foregroundStyle(tint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Text(asset.name)
-                .font(Typo.caption)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.top, Space.sm)
+            Sparkline(values: asset.sparkline)
+                .stroke(tint, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .frame(height: 26)
+                .padding(.vertical, Space.xs)
+            Spacer(minLength: 0)
+            Text(asset.price.fiat)
+                .font(Typo.figure)
                 .foregroundStyle(Theme.textSecondary)
-                .padding(.top, 2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         .padding(14)
         .frame(width: Self.width, height: Self.height, alignment: .topLeading)
