@@ -86,9 +86,10 @@ struct GainersMarquee: View {
     @State private var start = Date.now
     @State private var pausedTotal: TimeInterval = 0
     @State private var pauseStart: Date?
+    /// Exact width of one set of cards plus the trailing gap to the next set.
+    @State private var period: CGFloat = 0
 
     private let speed: CGFloat = 22 // pt per second
-    private var period: CGFloat { CGFloat(assets.count) * (GainerCard.width + Space.sm) }
 
     var body: some View {
         if reduceMotion || assets.isEmpty {
@@ -98,17 +99,22 @@ struct GainersMarquee: View {
             .scrollIndicators(.hidden)
             .padding(.vertical, Space.xs)
         } else {
-            TimelineView(.animation(paused: pauseStart != nil)) { context in
-                HStack(spacing: Space.sm) {
-                    cards
-                    cards
+            TimelineView(.animation(paused: pauseStart != nil || period == 0)) { context in
+                HStack(spacing: 0) {
+                    ForEach(0..<3, id: \.self) { copy in
+                        cards
+                            .padding(.trailing, Space.sm)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width in
+                                if copy == 0 { period = width }
+                            }
+                            .accessibilityHidden(copy > 0)
+                    }
                 }
+                .fixedSize()
                 .offset(x: -offset(at: context.date))
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: GainerCard.height)
-            .padding(.vertical, Space.xs)
-            .padding(.leading, Space.md)
+            .frame(height: GainerCard.height + Space.md)
             .clipped()
             .contentShape(.rect)
             .simultaneousGesture(
@@ -130,9 +136,11 @@ struct GainersMarquee: View {
         }
     }
 
+    /// Continuous offset wrapped modulo one set's width, so set 2 lands exactly where set 1 began.
     private func offset(at date: Date) -> CGFloat {
+        guard period > 0 else { return 0 }
         let now = pauseStart ?? date
-        let elapsed = now.timeIntervalSince(start) - pausedTotal
+        let elapsed = max(0, now.timeIntervalSince(start) - pausedTotal)
         return (CGFloat(elapsed) * speed).truncatingRemainder(dividingBy: period)
     }
 }
