@@ -15,15 +15,14 @@ struct ProfileView: View {
                     header.listRowBackground(Color.clear)
                 }
                 Section("Account") {
-                    row("Personal info", "person")
-                    row("Verification", "checkmark.seal")
-                    row("Payment methods", "creditcard")
+                    row("Personal info", "person") { PersonalInfoView() }
+                    row("Verification", "checkmark.seal") { VerificationView() }
+                    row("Payment methods", "creditcard") { PaymentMethodsView() }
                 }
                 Section("Security") {
-                    Toggle(isOn: $faceID) { Label("Face ID", systemImage: "faceid") }
-                        .tint(Theme.toggleTint)
-                    row("Passcode", "lock")
-                    row("Two-factor authentication", "key")
+                    FaceIDToggle()
+                    row("Passcode", "lock") { PasscodeView() }
+                    row("Two-factor authentication", "key") { TwoFactorView() }
                 }
                 Section("Appearance") {
                     AppearancePicker(selection: Binding(
@@ -84,5 +83,10 @@ struct ProfileView: View {
         } label: {
             Label(title, systemImage: icon)
         }
+    }
+
+    private func row<Destination: View>(_ title: String, _ icon: String,
+                                        @ViewBuilder destination: () -> Destination) -> some View {
+        NavigationLink(destination: destination) { Label(title, systemImage: icon) }
     }
 }
