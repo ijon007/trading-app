@@ -6,10 +6,17 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            Tab("Home", systemImage: "house", value: AppTab.home) { HomeView() }
-            Tab("Explore", systemImage: "safari", value: AppTab.explore) { ExploreView() }
-            Tab("Profile", systemImage: "person.crop.circle", value: AppTab.profile) { ProfileView() }
+            Tab(value: AppTab.home) { HomeView() } label: { icon("house.fill", "Home") }
+            Tab(value: AppTab.explore) { ExploreView() } label: { icon("safari.fill", "Explore") }
+            Tab(value: AppTab.profile) { ProfileView() } label: { icon("person.fill", "Profile") }
         }
         .sensoryFeedback(.selection, trigger: tab)
+    }
+
+    /// Icon-only tab label; the title stays for VoiceOver.
+    private func icon(_ symbol: String, _ title: String) -> some View {
+        Label(title, systemImage: symbol)
+            .labelStyle(.iconOnly)
+            .accessibilityLabel(title)
     }
 }
