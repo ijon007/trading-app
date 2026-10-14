@@ -62,6 +62,7 @@ struct ExploreView: View {
             .listStyle(.plain)
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
+            .contentMargins(.top, 0, for: .scrollContent)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
             .navigationTitle("Explore")
