@@ -59,7 +59,7 @@ struct ExploreView: View {
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .navigationTitle("Explore")
-            .searchable(text: $query, placement: .toolbar, prompt: "Search coins")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search coins")
             .sensoryFeedback(.selection, trigger: filter)
             .animation(.spring(response: 0.35, dampingFraction: 1), value: filter)
             .overlay {
