@@ -31,6 +31,9 @@ struct CoinDetailSheet: View {
                     ForEach(Timeframe.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
+                if let position = asset.position {
+                    positionCard(position)
+                }
                 marketInfo
             }
             .padding(.horizontal, Space.md)
@@ -114,6 +117,45 @@ struct CoinDetailSheet: View {
         .chartXSelection(value: $selectedDate)
         .frame(height: 220)
         .accessibilityLabel("\(asset.name) price chart, \(timeframe.rawValue)")
+    }
+
+    // MARK: Position
+
+    private func positionCard(_ p: Position) -> some View {
+        let tint = p.totalReturn >= 0 ? Theme.positive : Theme.negative
+        return VStack(alignment: .leading, spacing: Space.md) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Your position").font(Typo.headline).foregroundStyle(Theme.textPrimary)
+                Spacer()
+                Text("\(p.amount.formatted(.number.precision(.fractionLength(0...4)))) \(asset.symbol)")
+                    .font(Typo.figure).foregroundStyle(Theme.textSecondary)
+            }
+            Text(p.value.fiat)
+                .font(.system(size: 28, weight: .semibold).monospacedDigit())
+                .tracking(-0.6)
+                .foregroundStyle(Theme.textPrimary)
+            Grid(alignment: .leading, horizontalSpacing: Space.lg, verticalSpacing: Space.sm) {
+                GridRow {
+                    stat("Average cost", p.averageCost.fiat)
+                    stat("Portfolio", p.portfolioShare.formatted(.percent.precision(.fractionLength(1))))
+                }
+                GridRow {
+                    stat("Total return", (p.totalReturn >= 0 ? "+" : "−") + abs(p.totalReturn).fiat, tint: tint)
+                    stat("Return", p.totalReturnPercent.percent, tint: tint)
+                }
+            }
+        }
+        .padding(Space.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassEffect(.regular, in: .rect(cornerRadius: Radius.lg))
+        .accessibilityElement(children: .combine)
+    }
+
+    private func stat(_ title: String, _ value: String, tint: Color = Theme.textPrimary) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(Typo.caption).foregroundStyle(Theme.textSecondary)
+            Text(value).font(Typo.figure).foregroundStyle(tint).lineLimit(1).minimumScaleFactor(0.8)
+        }
     }
 
     // MARK: Market info
