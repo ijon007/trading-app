@@ -1,11 +1,5 @@
 import SwiftUI
 
-enum Appearance: String, CaseIterable, Identifiable {
-    case system = "System", light = "Light", dark = "Dark"
-    var id: String { rawValue }
-    var scheme: ColorScheme? { self == .light ? .light : self == .dark ? .dark : nil }
-}
-
 struct ProfileView: View {
     @AppStorage("appearance") private var appearance: Appearance = .system
     @AppStorage("currency") private var currency = "USD"
@@ -34,7 +28,7 @@ struct ProfileView: View {
                         ForEach(["USD", "EUR", "GBP", "CHF"], id: \.self) { Text($0) }
                     } label: { Label("Currency", systemImage: "dollarsign.circle") }
                     Picker(selection: $appearance) {
-                        ForEach(Appearance.allCases) { Text($0.rawValue).tag($0) }
+                        ForEach(Appearance.allCases) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
                     } label: { Label("Appearance", systemImage: "circle.lefthalf.filled") }
                     Toggle(isOn: $notifications) { Label("Notifications", systemImage: "bell") }
                 }
