@@ -1,0 +1,173 @@
+import SwiftUI
+import Charts
+
+/// Coin detail presented as a native glass sheet.
+struct CoinDetailSheet: View {
+    let asset: Asset
+    @State private var timeframe: Timeframe = .day
+    @State private var selectedDate: Date?
+
+    private var points: [PricePoint] { asset.series(timeframe) }
+    private var change: Double { asset.change(over: timeframe) }
+    private var tint: Color { change >= 0 ? Theme.positive : Theme.negative }
+
+    private var selected: PricePoint? {
+        guard let selectedDate else { return nil }
+        return points.min { abs($0.date.timeIntervalSince(selectedDate)) < abs($1.date.timeIntervalSince(selectedDate)) }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.lg) {
+                header
+                chart
+                Picker("Timeframe", selection: $timeframe.animation(.spring(response: 0.4, dampingFraction: 1))) {
+                    ForEach(Timeframe.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                marketInfo
+            }
+            .padding(.horizontal, Space.md)
+            .padding(.top, Space.lg)
+            .padding(.bottom, Space.md)
+        }
+        .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .bottom) { actions }
+        .sensoryFeedback(.selection, trigger: timeframe)
+        .sensoryFeedback(.selection, trigger: selected?.date) { _, new in new != nil }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(spacing: Space.xs) {
+                CoinIcon(symbol: asset.symbol, size: 28)
+                Text(asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
+                Text(asset.symbol).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+            }
+            Text((selected?.price ?? asset.price).fiat)
+                .numeral()
+                .foregroundStyle(Theme.textPrimary)
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Group {
+                if let selected {
+                    Text(selected.date, format: dateFormat)
+                        .foregroundStyle(Theme.textSecondary)
+                } else {
+                    HStack(spacing: Space.xxs) {
+                        Text(change.percent).foregroundStyle(tint)
+                        Text(timeframe == .all ? "all time" : "past \(timeframe.rawValue)")
+                            .foregroundStyle(Theme.textTertiary)
+                    }
+                }
+            }
+            .font(Typo.figure)
+            .frame(height: 20, alignment: .leading)
+        }
+    }
+
+    private var dateFormat: Date.FormatStyle {
+        switch timeframe {
+        case .day: .dateTime.hour().minute()
+        case .week, .month: .dateTime.month(.abbreviated).day().hour()
+        case .year, .all: .dateTime.month(.abbreviated).day().year()
+        }
+    }
+
+    // MARK: Chart
+
+    private var chart: some View {
+        let prices = points.map(\.price)
+        let lo = prices.min() ?? 0, hi = prices.max() ?? 1
+        let pad = (hi - lo) * 0.08
+        return Chart {
+            ForEach(points) { point in
+                LineMark(x: .value("Date", point.date), y: .value("Price", point.price))
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(tint)
+            }
+            if let selected {
+                RuleMark(x: .value("Selected", selected.date))
+                    .foregroundStyle(Theme.textTertiary)
+                    .lineStyle(StrokeStyle(lineWidth: 1))
+                PointMark(x: .value("Date", selected.date), y: .value("Price", selected.price))
+                    .foregroundStyle(tint)
+                    .symbolSize(60)
+            }
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartYScale(domain: (lo - pad)...(hi + pad))
+        .chartXSelection(value: $selectedDate)
+        .frame(height: 220)
+        .accessibilityLabel("\(asset.name) price chart, \(timeframe.rawValue)")
+    }
+
+    // MARK: Market info
+
+    private var marketInfo: some View {
+        let info = asset.marketInfo
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("Market info")
+                .font(Typo.headline)
+                .foregroundStyle(Theme.textPrimary)
+                .padding(.bottom, Space.xs)
+            infoRow("Market cap", info.marketCap.compactFiat)
+            infoRow("24h volume", info.volume24h.compactFiat)
+            infoRow("Circulating supply", "\(info.circulatingSupply.formatted(.number.notation(.compactName).precision(.fractionLength(0...2)))) \(asset.symbol)")
+            infoRow("All-time high", info.allTimeHigh.fiat)
+            infoRow("Rank", "#\(info.rank)", divider: false)
+        }
+    }
+
+    private func infoRow(_ title: String, _ value: String, divider: Bool = true) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(title).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Text(value).font(Typo.figure).foregroundStyle(Theme.textPrimary)
+            }
+            .padding(.vertical, Space.row)
+            if divider { Divider().overlay(Theme.hairline) }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: Actions
+
+    private var actions: some View {
+        HStack(spacing: Space.sm) {
+            Button {
+                Haptics.tap()
+            } label: {
+                Text("Sell").font(Typo.headline).frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glass)
+            .tint(Theme.textPrimary)
+
+            Button {
+                Haptics.tap()
+            } label: {
+                Text("Buy").font(Typo.headline).frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(Theme.accent)
+        }
+        .controlSize(.large)
+        .padding(.horizontal, Space.md)
+        .padding(.top, Space.xs)
+        .padding(.bottom, Space.xs)
+    }
+}
+
+extension Double {
+    var compactFiat: String {
+        formatted(.currency(code: "USD").notation(.compactName).precision(.fractionLength(0...2)))
+    }
+}
