@@ -55,6 +55,8 @@ struct CoinDetailSheet: View {
 
     // MARK: Header
 
+    private var displayedPrice: Double { selected?.price ?? asset.price }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             HStack(spacing: Space.xs) {
@@ -62,10 +64,12 @@ struct CoinDetailSheet: View {
                 Text(asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                 Text(asset.symbol).font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
-            Text((selected?.price ?? asset.price).fiat)
+            Text(displayedPrice.fiat)
                 .numeral()
                 .foregroundStyle(Theme.textPrimary)
-                .contentTransition(.numericText())
+                // Digits roll up or down with the value; kept short so scrubbing stays responsive.
+                .contentTransition(.numericText(value: displayedPrice))
+                .animation(.snappy(duration: 0.18), value: displayedPrice)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Group {
@@ -74,7 +78,10 @@ struct CoinDetailSheet: View {
                         .foregroundStyle(Theme.textSecondary)
                 } else {
                     HStack(spacing: Space.xxs) {
-                        Text(change.percent).foregroundStyle(tint)
+                        Text(change.percent)
+                            .foregroundStyle(tint)
+                            .contentTransition(.numericText(value: change))
+                            .animation(.snappy, value: change)
                         Text(timeframe == .all ? "all time" : "past \(timeframe.rawValue)")
                             .foregroundStyle(Theme.textTertiary)
                     }
