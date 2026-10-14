@@ -20,8 +20,14 @@ struct CoinDetailSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
                 header
-                chart
-                Picker("Timeframe", selection: $timeframe.animation(.spring(response: 0.4, dampingFraction: 1))) {
+                // A fresh chart per timeframe, crossfaded, so marks never interpolate
+                // between series with different point counts and x-domains.
+                ZStack {
+                    chart
+                        .id(timeframe)
+                        .transition(.opacity)
+                }
+                Picker("Timeframe", selection: $timeframe.animation(.easeInOut(duration: 0.2))) {
                     ForEach(Timeframe.allCases) { Text($0.rawValue).tag($0) }
                 }
                 .pickerStyle(.segmented)
@@ -34,6 +40,7 @@ struct CoinDetailSheet: View {
         .scrollIndicators(.hidden)
         .safeAreaInset(edge: .bottom) { actions }
         .sensoryFeedback(.selection, trigger: timeframe)
+        .onChange(of: timeframe) { selectedDate = nil }
         .sensoryFeedback(.selection, trigger: selected?.date) { _, new in new != nil }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
