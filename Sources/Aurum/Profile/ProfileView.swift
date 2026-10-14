@@ -52,8 +52,10 @@ struct ProfileView: View {
             .background(Theme.background)
             .navigationTitle("Profile")
             .toolbarTitleDisplayMode(.inline)
-            .onChange(of: faceID) { Haptics.select() }
-            .onChange(of: notifications) { Haptics.select() }
+            .sensoryFeedback(.selection, trigger: faceID)
+            .sensoryFeedback(.selection, trigger: notifications)
+            .sensoryFeedback(.selection, trigger: currency)
+            .sensoryFeedback(.selection, trigger: appearance)
             .confirmationDialog("Sign out of Aurum?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button("Sign out", role: .destructive) { Haptics.success() }
             }

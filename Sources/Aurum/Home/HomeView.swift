@@ -21,7 +21,11 @@ struct HomeView: View {
                     .listRowInsets(EdgeInsets())
                 }
                 Section("Holdings") {
-                    ForEach(holdings) { HoldingRow(holding: $0) }
+                    ForEach(holdings) { holding in
+                        HoldingRow(holding: holding)
+                            .contentShape(Rectangle())
+                            .onTapGesture { Haptics.tap() }
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
@@ -51,7 +55,7 @@ struct HomeView: View {
             ForEach(actions, id: \.0) { title, icon in
                 VStack(spacing: Space.xs) {
                     Button {
-                        Haptics.tap()
+                        Haptics.tap() // light impact
                     } label: {
                         Image(systemName: icon)
                             .font(.system(size: 17, weight: .semibold))

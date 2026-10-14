@@ -28,14 +28,18 @@ struct ExploreView: View {
                     .listRowInsets(EdgeInsets())
                 }
                 Section {
-                    ForEach(assets) { AssetRow(asset: $0) }
+                    ForEach(assets) { asset in
+                        AssetRow(asset: asset)
+                            .contentShape(Rectangle())
+                            .onTapGesture { Haptics.tap() }
+                    }
                 }
             }
             .scrollContentBackground(.hidden)
             .background(Theme.background)
             .navigationTitle("Explore")
             .searchable(text: $query, prompt: "Search assets")
-            .onChange(of: filter) { Haptics.select() }
+            .sensoryFeedback(.selection, trigger: filter)
             .overlay {
                 if assets.isEmpty { ContentUnavailableView.search(text: query) }
             }
