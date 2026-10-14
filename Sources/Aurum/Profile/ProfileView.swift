@@ -21,6 +21,7 @@ struct ProfileView: View {
                 }
                 Section("Security") {
                     Toggle(isOn: $faceID) { Label("Face ID", systemImage: "faceid") }
+                        .tint(Theme.toggleTint)
                     row("Passcode", "lock")
                     row("Two-factor authentication", "key")
                 }
@@ -35,6 +36,7 @@ struct ProfileView: View {
                         ForEach(["USD", "EUR", "GBP", "CHF"], id: \.self) { Text($0) }
                     } label: { Label("Currency", systemImage: "dollarsign.circle") }
                     Toggle(isOn: $notifications) { Label("Notifications", systemImage: "bell") }
+                        .tint(Theme.toggleTint)
                 }
                 Section("Support") {
                     row("Help", "questionmark.circle")
