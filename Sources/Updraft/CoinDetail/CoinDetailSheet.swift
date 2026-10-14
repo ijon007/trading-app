@@ -35,6 +35,7 @@ struct CoinDetailSheet: View {
                     positionCard(position)
                 }
                 marketInfo
+                history
             }
             .padding(.horizontal, Space.md)
             .padding(.top, Space.lg)
@@ -181,6 +182,59 @@ struct CoinDetailSheet: View {
                 Text(title).font(Typo.callout).foregroundStyle(Theme.textSecondary)
                 Spacer()
                 Text(value).font(Typo.figure).foregroundStyle(Theme.textPrimary)
+            }
+            .padding(.vertical, Space.row)
+            if divider { Divider().overlay(Theme.hairline) }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: History
+
+    private var history: some View {
+        let items = asset.transactions()
+        return VStack(alignment: .leading, spacing: 0) {
+            Text("History")
+                .font(Typo.headline)
+                .foregroundStyle(Theme.textPrimary)
+                .padding(.bottom, Space.xs)
+            if items.isEmpty {
+                VStack(spacing: Space.xs) {
+                    Image(systemName: "clock")
+                        .font(.system(size: 22, weight: .regular))
+                        .foregroundStyle(Theme.textTertiary)
+                    Text("No activity yet").font(Typo.callout).foregroundStyle(Theme.textSecondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Space.xl)
+            } else {
+                ForEach(items) { tx in
+                    transactionRow(tx, divider: tx.id != items.last?.id)
+                }
+            }
+        }
+    }
+
+    private func transactionRow(_ tx: Transaction, divider: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: Space.sm) {
+                Image(systemName: tx.kind.symbol)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 36, height: 36)
+                    .background(Theme.surfaceHi, in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tx.kind.rawValue).font(Typo.headline).foregroundStyle(Theme.textPrimary)
+                    Text(tx.date, format: .dateTime.month(.abbreviated).day().year())
+                        .font(Typo.caption).foregroundStyle(Theme.textSecondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(tx.kind.isInflow ? "+" : "−")\(tx.amount.formatted(.number.precision(.fractionLength(0...4)))) \(asset.symbol)")
+                        .font(Typo.figure)
+                        .foregroundStyle(tx.kind.isInflow ? Theme.positive : Theme.textPrimary)
+                    Text(tx.fiat.fiat).font(Typo.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                }
             }
             .padding(.vertical, Space.row)
             if divider { Divider().overlay(Theme.hairline) }
