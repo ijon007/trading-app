@@ -35,7 +35,7 @@ struct AppearancePicker: View {
     }
 }
 
-/// Tiny phone mock in Aurum's palette: balance, change pill, actions and rows.
+/// Tiny phone mock in Updraft's palette: balance, change pill, actions and rows.
 private struct PhonePreview: View {
     let dark: Bool
     let isSelected: Bool

@@ -54,7 +54,7 @@ struct ProfileView: View {
             .sensoryFeedback(.selection, trigger: faceID)
             .sensoryFeedback(.selection, trigger: notifications)
             .sensoryFeedback(.selection, trigger: currency)
-            .confirmationDialog("Sign out of Aurum?", isPresented: $confirmSignOut, titleVisibility: .visible) {
+            .confirmationDialog("Sign out of Updraft?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button("Sign out", role: .destructive) { Haptics.success() }
             }
         }

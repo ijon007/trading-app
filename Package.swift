@@ -2,8 +2,8 @@
 import PackageDescription
 
 let package = Package(
-    name: "Aurum",
+    name: "Updraft",
     platforms: [.iOS(.v26), .macOS(.v15)],
-    products: [.library(name: "Aurum", targets: ["Aurum"])],
-    targets: [.target(name: "Aurum", resources: [.process("Resources")])]
+    products: [.library(name: "Updraft", targets: ["Updraft"])],
+    targets: [.target(name: "Updraft", resources: [.process("Resources")])]
 )

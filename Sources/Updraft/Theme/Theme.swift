@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-/// Aurum colorway: pure grayscale, light and dark. Only color is gains/losses.
+/// Updraft colorway: pure grayscale, light and dark. Only color is gains/losses.
 enum Theme {
     // Surfaces
     static let background = Color(light: 0xF7F7F5, dark: 0x0B0B0C)
@@ -51,7 +51,7 @@ extension Color {
 }
 
 extension View {
-    /// Standard Liquid Glass card used across Aurum.
+    /// Standard Liquid Glass card used across Updraft.
     func glassCard(radius: CGFloat = Theme.radius) -> some View {
         glassEffect(.regular, in: .rect(cornerRadius: radius))
     }

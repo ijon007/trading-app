@@ -1,6 +1,6 @@
 import UIKit
 
-/// Aurum haptic conventions (follow these on every new screen):
+/// Updraft haptic conventions (follow these on every new screen):
 /// - Selection (`.sensoryFeedback(.selection, trigger:)` / `select()`): tab switches,
 ///   segmented pickers, pickers, toggles.
 /// - Light impact (`tap()`): buttons, quick actions, row taps, pull to refresh.

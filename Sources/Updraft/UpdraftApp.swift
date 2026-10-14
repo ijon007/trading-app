@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct AurumApp: App {
+struct UpdraftApp: App {
     @AppStorage("appearance") private var appearance: Appearance?
 
     var body: some Scene {
