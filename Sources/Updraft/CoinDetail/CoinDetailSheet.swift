@@ -257,7 +257,7 @@ struct CoinDetailSheet: View {
             Button {
                 Haptics.tap()
             } label: {
-                Text("Buy").font(Typo.headline).frame(maxWidth: .infinity)
+                Text("Buy").font(Typo.headline).foregroundStyle(Theme.background).frame(maxWidth: .infinity)
             }
             .buttonStyle(.glassProminent)
             .tint(Theme.accent)
