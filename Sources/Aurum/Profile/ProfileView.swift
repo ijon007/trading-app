@@ -1,7 +1,8 @@
 import SwiftUI
 
 struct ProfileView: View {
-    @AppStorage("appearance") private var appearance: Appearance = .system
+    @AppStorage("appearance") private var appearance: Appearance?
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("currency") private var currency = "USD"
     @AppStorage("faceID") private var faceID = true
     @AppStorage("notifications") private var notifications = true
@@ -23,13 +24,16 @@ struct ProfileView: View {
                     row("Passcode", "lock")
                     row("Two-factor authentication", "key")
                 }
+                Section("Appearance") {
+                    AppearancePicker(selection: Binding(
+                        get: { appearance ?? Appearance(colorScheme) },
+                        set: { appearance = $0 }
+                    ))
+                }
                 Section("Preferences") {
                     Picker(selection: $currency) {
                         ForEach(["USD", "EUR", "GBP", "CHF"], id: \.self) { Text($0) }
                     } label: { Label("Currency", systemImage: "dollarsign.circle") }
-                    Picker(selection: $appearance) {
-                        ForEach(Appearance.allCases) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
-                    } label: { Label("Appearance", systemImage: "circle.lefthalf.filled") }
                     Toggle(isOn: $notifications) { Label("Notifications", systemImage: "bell") }
                 }
                 Section("Support") {
@@ -49,7 +53,6 @@ struct ProfileView: View {
             .sensoryFeedback(.selection, trigger: faceID)
             .sensoryFeedback(.selection, trigger: notifications)
             .sensoryFeedback(.selection, trigger: currency)
-            .sensoryFeedback(.selection, trigger: appearance)
             .confirmationDialog("Sign out of Aurum?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button("Sign out", role: .destructive) { Haptics.success() }
             }

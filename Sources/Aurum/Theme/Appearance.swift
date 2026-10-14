@@ -1,21 +1,10 @@
 import SwiftUI
 
-/// App-wide color scheme preference, stored under "appearance".
+/// Light or dark. Stored under "appearance"; unset means follow the system.
 enum Appearance: String, CaseIterable, Identifiable {
-    case system = "System", light = "Light", dark = "Dark"
+    case light, dark
     var id: String { rawValue }
-    var scheme: ColorScheme? {
-        switch self {
-        case .system: nil
-        case .light: .light
-        case .dark: .dark
-        }
-    }
-    var symbol: String {
-        switch self {
-        case .system: "circle.lefthalf.filled"
-        case .light: "sun.max"
-        case .dark: "moon"
-        }
-    }
+    var title: String { self == .light ? "Light" : "Dark" }
+    var scheme: ColorScheme { self == .light ? .light : .dark }
+    init(_ scheme: ColorScheme) { self = scheme == .dark ? .dark : .light }
 }
