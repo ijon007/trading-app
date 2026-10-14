@@ -73,24 +73,73 @@ struct ExploreView: View {
     }
 
     private var gainersRow: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: Space.sm) {
-                ForEach(topGainers) { asset in
-                    GainerCard(asset: asset)
-                        .onTapGesture { Haptics.tap() }
-                }
+        GainersMarquee(assets: topGainers)
+    }
+}
+
+/// Slow, seamless auto-scrolling row of gainer cards. Pauses while touched;
+/// falls back to a manual scroll when Reduce Motion is on.
+struct GainersMarquee: View {
+    let assets: [Asset]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var start = Date.now
+    @State private var pausedTotal: TimeInterval = 0
+    @State private var pauseStart: Date?
+
+    private let speed: CGFloat = 22 // pt per second
+    private var period: CGFloat { CGFloat(assets.count) * (GainerCard.width + Space.sm) }
+
+    var body: some View {
+        if reduceMotion || assets.isEmpty {
+            ScrollView(.horizontal) {
+                cards.padding(.horizontal, Space.md)
             }
-            .scrollTargetLayout()
-            .padding(.horizontal, Space.md)
+            .scrollIndicators(.hidden)
             .padding(.vertical, Space.xs)
+        } else {
+            TimelineView(.animation(paused: pauseStart != nil)) { context in
+                HStack(spacing: Space.sm) {
+                    cards
+                    cards
+                }
+                .offset(x: -offset(at: context.date))
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(height: GainerCard.height)
+            .padding(.vertical, Space.xs)
+            .padding(.leading, Space.md)
+            .clipped()
+            .contentShape(.rect)
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { _ in if pauseStart == nil { pauseStart = .now } }
+                    .onEnded { _ in
+                        if let p = pauseStart { pausedTotal += Date.now.timeIntervalSince(p) }
+                        pauseStart = nil
+                    }
+            )
         }
-        .scrollIndicators(.hidden)
-        .scrollTargetBehavior(.viewAligned)
+    }
+
+    private var cards: some View {
+        HStack(spacing: Space.sm) {
+            ForEach(assets) { asset in
+                GainerCard(asset: asset).onTapGesture { Haptics.tap() }
+            }
+        }
+    }
+
+    private func offset(at date: Date) -> CGFloat {
+        let now = pauseStart ?? date
+        let elapsed = now.timeIntervalSince(start) - pausedTotal
+        return (CGFloat(elapsed) * speed).truncatingRemainder(dividingBy: period)
     }
 }
 
 /// Compact liquid glass card for the top gainers carousel.
 struct GainerCard: View {
+    static let width: CGFloat = 148
+    static let height: CGFloat = 136
     let asset: Asset
     var body: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
@@ -107,7 +156,7 @@ struct GainerCard: View {
             ChangePill(value: asset.change24h)
         }
         .padding(Space.md)
-        .frame(width: 148, height: 136, alignment: .leading)
+        .frame(width: Self.width, height: Self.height, alignment: .leading)
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radius.lg))
     }
 }
