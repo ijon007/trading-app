@@ -18,11 +18,11 @@ enum Theme {
     static let accent = textPrimary
 
     /// Toggle "on" tint: black in light; muted green in dark so on/off stay distinct.
-    static let toggleTint = Color(light: 0x0B0B0C, dark: 0x5FB38A)
+    static let toggleTint = Color(light: 0x0B0B0C, dark: 0x34D399)
 
     // Market semantics (muted)
-    static let positive = Color(light: 0x2F8F5B, dark: 0x5FB38A)
-    static let negative = Color(light: 0xC0483C, dark: 0xD06A5E)
+    static let positive = Color(light: 0x2F8F5B, dark: 0x34D399)
+    static let negative = Color(light: 0xC0483C, dark: 0xF87171)
 
     // Type helpers (SF)
     static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .semibold) }
