@@ -36,16 +36,17 @@ struct ChangeText: View {
 /// Subtle tinted capsule for a percent change.
 struct ChangePill: View {
     let value: Double
+    var compact = false
     var body: some View {
         let tint = value >= 0 ? Theme.positive : Theme.negative
         HStack(spacing: 3) {
             Image(systemName: value >= 0 ? "arrow.up.right" : "arrow.down.right")
-                .font(.system(size: 11, weight: .bold))
-            Text(value.percent).font(Typo.figure)
+                .font(.system(size: compact ? 9 : 11, weight: .bold))
+            Text(value.percent).font(compact ? Typo.caption.monospacedDigit() : Typo.figure)
         }
         .foregroundStyle(tint)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 5)
+        .padding(.horizontal, compact ? 7 : 10)
+        .padding(.vertical, compact ? 3 : 5)
         .background(tint.opacity(0.12), in: Capsule())
     }
 }

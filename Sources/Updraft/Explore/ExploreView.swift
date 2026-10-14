@@ -145,28 +145,45 @@ struct GainersMarquee: View {
     }
 }
 
-/// Compact liquid glass card for the top gainers carousel.
+/// Top gainers card. Hierarchy reads top-to-bottom: identity (icon + symbol)
+/// and the change pill share the top edge, the sparkline shows the move, and the
+/// price sits large at the bottom as the anchor.
 struct GainerCard: View {
-    static let width: CGFloat = 148
-    static let height: CGFloat = 136
+    static let width: CGFloat = 164
+    static let height: CGFloat = 144
     let asset: Asset
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.sm) {
-            HStack(spacing: Space.xs) {
-                CoinIcon(symbol: asset.symbol, size: 28)
-                Text(asset.symbol).font(Typo.headline).foregroundStyle(Theme.textPrimary)
+        let tint = asset.change24h >= 0 ? Theme.positive : Theme.negative
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 6) {
+                CoinIcon(symbol: asset.symbol, size: 22)
+                Text(asset.symbol)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer(minLength: Space.xxs)
+                ChangePill(value: asset.change24h, compact: true)
             }
+            Sparkline(values: asset.sparkline)
+                .stroke(tint, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+                .frame(height: 30)
+                .padding(.vertical, Space.sm)
             Spacer(minLength: 0)
             Text(asset.price.fiat)
-                .font(Typo.figure)
+                .font(.system(size: 20, weight: .semibold).monospacedDigit())
+                .tracking(-0.4)
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            ChangePill(value: asset.change24h)
+                .minimumScaleFactor(0.7)
+            Text(asset.name)
+                .font(Typo.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.top, 2)
         }
-        .padding(Space.md)
-        .frame(width: Self.width, height: Self.height, alignment: .leading)
+        .padding(14)
+        .frame(width: Self.width, height: Self.height, alignment: .topLeading)
         .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radius.lg))
+        .accessibilityElement(children: .combine)
     }
 }
 
