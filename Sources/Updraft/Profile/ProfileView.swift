@@ -33,7 +33,7 @@ struct ProfileView: View {
                 }
                 Section("Preferences") {
                     Picker(selection: $currency) {
-                        ForEach(["USD", "EUR", "GBP", "CHF"], id: \.self) { Text($0) }
+                        ForEach(Currency.allCases) { c in Text("\(c.symbol)  \(c.rawValue)").tag(c.rawValue) }
                     } label: { Label("Currency", systemImage: "dollarsign.circle") }
                     Toggle(isOn: $notifications) { Label("Notifications", systemImage: "bell") }
                         .tint(Theme.toggleTint)

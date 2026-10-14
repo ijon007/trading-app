@@ -48,6 +48,8 @@ enum SampleData {
 }
 
 extension Double {
-    var fiat: String { formatted(.currency(code: "USD").precision(.fractionLength(2))) }
+    /// USD amount shown in the selected display currency.
+    var fiat: String { Currency.current.format(self) }
+    var compactFiat: String { Currency.current.format(self, compact: true) }
     var percent: String { (self >= 0 ? "+" : "") + formatted(.number.precision(.fractionLength(2))) + "%" }
 }

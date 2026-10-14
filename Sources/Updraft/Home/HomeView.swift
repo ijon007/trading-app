@@ -2,6 +2,8 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var selected: Asset?
+    /// Read so the screen redraws in the new currency.
+    @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
     private let holdings = SampleData.holdings
     private let actions: [(title: String, icon: String)] = [
         ("Swap", "arrow.left.arrow.right"), ("Send", "arrow.up"), ("Receive", "arrow.down"),
@@ -37,6 +39,7 @@ struct HomeView: View {
                 }
             }
             .listStyle(.plain)
+            .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)

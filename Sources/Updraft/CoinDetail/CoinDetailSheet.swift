@@ -6,6 +6,8 @@ struct CoinDetailSheet: View {
     let asset: Asset
     @State private var timeframe: Timeframe = .day
     @State private var selectedDate: Date?
+    /// Read so the screen redraws in the new currency.
+    @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
 
     private var points: [PricePoint] { asset.series(timeframe) }
     private var change: Double { asset.change(over: timeframe) }
@@ -42,6 +44,7 @@ struct CoinDetailSheet: View {
             .padding(.bottom, Space.md)
         }
         .scrollIndicators(.hidden)
+        .id(currency)
         .safeAreaInset(edge: .bottom) { actions }
         .sensoryFeedback(.selection, trigger: timeframe)
         .onChange(of: timeframe) { selectedDate = nil }
@@ -266,11 +269,5 @@ struct CoinDetailSheet: View {
         .padding(.horizontal, Space.md)
         .padding(.top, Space.xs)
         .padding(.bottom, Space.xs)
-    }
-}
-
-extension Double {
-    var compactFiat: String {
-        formatted(.currency(code: "USD").notation(.compactName).precision(.fractionLength(0...2)))
     }
 }

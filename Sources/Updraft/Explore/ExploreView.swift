@@ -5,6 +5,8 @@ struct ExploreView: View {
     @State private var filter: Filter = .trending
     @State private var query = ""
     @State private var selected: Asset?
+    /// Read so the screen redraws in the new currency.
+    @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
 
     private var topGainers: [Asset] {
         SampleData.assets.filter { $0.change24h > 0 }.sorted { $0.change24h > $1.change24h }
@@ -58,6 +60,7 @@ struct ExploreView: View {
                 }
             }
             .listStyle(.plain)
+            .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
