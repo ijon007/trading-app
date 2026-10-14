@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct HomeView: View {
-    @AppStorage("appearance") private var appearance: Appearance = .system
     private let holdings = SampleData.holdings
     private let actions: [(title: String, icon: String)] = [
         ("Swap", "arrow.left.arrow.right"), ("Send", "arrow.up"), ("Receive", "arrow.down"),
@@ -41,20 +40,6 @@ struct HomeView: View {
             .background(Theme.background)
             .navigationTitle("Home")
             .toolbarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) { themeMenu }
-            }
-            .sensoryFeedback(.selection, trigger: appearance)
-        }
-    }
-
-    private var themeMenu: some View {
-        Menu {
-            Picker("Appearance", selection: $appearance) {
-                ForEach(Appearance.allCases) { Label($0.rawValue, systemImage: $0.symbol).tag($0) }
-            }
-        } label: {
-            Label("Appearance", systemImage: appearance.symbol)
         }
     }
 
