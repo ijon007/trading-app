@@ -33,7 +33,7 @@ struct ExploreView: View {
                 if query.isEmpty {
                     // Plain row, not a Section header, so it scrolls away instead of pinning.
                     sectionTitle("Top gainers")
-                        .listRowInsets(EdgeInsets(top: Space.sm, leading: Space.md, bottom: 0, trailing: Space.md))
+                        .listRowInsets(EdgeInsets(top: 0, leading: Space.md, bottom: 0, trailing: Space.md))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     gainersRow
@@ -60,6 +60,7 @@ struct ExploreView: View {
                 }
             }
             .listStyle(.plain)
+            .environment(\.defaultMinListRowHeight, 0)
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
             .contentMargins(.top, 0, for: .scrollContent)
