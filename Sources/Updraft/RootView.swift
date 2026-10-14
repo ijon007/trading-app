@@ -8,9 +8,24 @@ struct RootView: View {
         TabView(selection: $tab) {
             Tab(value: AppTab.home) { HomeView() } label: { icon("house.fill", "Home") }
             Tab(value: AppTab.explore) { ExploreView() } label: { icon("safari.fill", "Explore") }
-            Tab(value: AppTab.profile) { ProfileView() } label: { icon("person.fill", "Profile") }
+            Tab(value: AppTab.profile) { ProfileView() } label: { avatar }
         }
         .sensoryFeedback(.selection, trigger: tab)
+    }
+
+    /// Profile tab: the user's avatar, ringed when selected; falls back to a symbol.
+    @ViewBuilder private var avatar: some View {
+        if let image = TabAvatar.image(selected: tab == .profile) {
+            Label {
+                Text("Profile")
+            } icon: {
+                Image(uiImage: image).renderingMode(.original)
+            }
+            .labelStyle(.iconOnly)
+            .accessibilityLabel("Profile")
+        } else {
+            icon("person.crop.circle.fill", "Profile")
+        }
     }
 
     /// Icon-only tab label; the title stays for VoiceOver.
