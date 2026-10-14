@@ -22,7 +22,7 @@ struct ExploreView: View {
         }
     }
 
-    private let rowInsets = EdgeInsets(top: Space.xs, leading: Space.md, bottom: Space.xs, trailing: Space.md)
+    private let rowInsets = EdgeInsets(top: Space.row, leading: Space.md, bottom: Space.row, trailing: Space.md)
 
     var body: some View {
         NavigationStack {

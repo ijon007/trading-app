@@ -8,6 +8,9 @@ enum Space {
     static let lg: CGFloat = 24
     static let xl: CGFloat = 32
     static let xxl: CGFloat = 48
+
+    /// Vertical inset above and below each list row (Home holdings, Explore assets).
+    static let row: CGFloat = 12
 }
 
 enum Radius {

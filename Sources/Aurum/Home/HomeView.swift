@@ -28,7 +28,7 @@ struct HomeView: View {
                             .onTapGesture { Haptics.tap() }
                             .listRowBackground(Color.clear)
                             .listRowSeparatorTint(Theme.hairline)
-                            .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.md, bottom: Space.xs, trailing: Space.md))
+                            .listRowInsets(EdgeInsets(top: Space.row, leading: Space.md, bottom: Space.row, trailing: Space.md))
                     }
                 } header: {
                     Text("Holdings")
