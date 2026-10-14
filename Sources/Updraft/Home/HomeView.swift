@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct HomeView: View {
+    @State private var selected: Asset?
     private let holdings = SampleData.holdings
     private let actions: [(title: String, icon: String)] = [
         ("Swap", "arrow.left.arrow.right"), ("Send", "arrow.up"), ("Receive", "arrow.down"),
@@ -24,7 +25,7 @@ struct HomeView: View {
                     ForEach(holdings) { holding in
                         HoldingRow(holding: holding)
                             .contentShape(Rectangle())
-                            .onTapGesture { Haptics.tap() }
+                            .onTapGesture { Haptics.tap(); selected = holding.asset }
                             .listRowBackground(Color.clear)
                             .listRowSeparatorTint(Theme.hairline)
                             .listRowInsets(EdgeInsets(top: Space.row, leading: Space.md, bottom: Space.row, trailing: Space.md))
@@ -37,6 +38,7 @@ struct HomeView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
             .toolbar(.hidden, for: .navigationBar)
         }

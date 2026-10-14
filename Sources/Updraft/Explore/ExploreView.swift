@@ -4,6 +4,7 @@ struct ExploreView: View {
     enum Filter: String, CaseIterable { case trending = "Trending", top = "Top", gainers = "Gainers" }
     @State private var filter: Filter = .trending
     @State private var query = ""
+    @State private var selected: Asset?
 
     private var topGainers: [Asset] {
         SampleData.assets.filter { $0.change24h > 0 }.sorted { $0.change24h > $1.change24h }
@@ -50,7 +51,7 @@ struct ExploreView: View {
                 ForEach(assets) { asset in
                     AssetRow(asset: asset)
                         .contentShape(Rectangle())
-                        .onTapGesture { Haptics.tap() }
+                        .onTapGesture { Haptics.tap(); selected = asset }
                         .listRowInsets(rowInsets)
                         .listRowBackground(Color.clear)
                         .listRowSeparatorTint(Theme.hairline)
@@ -58,6 +59,7 @@ struct ExploreView: View {
             }
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
+            .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
             .navigationTitle("Explore")
             .toolbarTitleDisplayMode(.large)
@@ -75,7 +77,7 @@ struct ExploreView: View {
     }
 
     private var gainersRow: some View {
-        GainersMarquee(assets: topGainers)
+        GainersMarquee(assets: topGainers) { selected = $0 }
     }
 }
 
@@ -83,6 +85,7 @@ struct ExploreView: View {
 /// falls back to a manual scroll when Reduce Motion is on.
 struct GainersMarquee: View {
     let assets: [Asset]
+    var onSelect: (Asset) -> Void = { _ in }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var start = Date.now
     @State private var pausedTotal: TimeInterval = 0
@@ -132,7 +135,7 @@ struct GainersMarquee: View {
     private var cards: some View {
         HStack(spacing: Space.sm) {
             ForEach(assets) { asset in
-                GainerCard(asset: asset).onTapGesture { Haptics.tap() }
+                GainerCard(asset: asset).onTapGesture { Haptics.tap(); onSelect(asset) }
             }
         }
     }
