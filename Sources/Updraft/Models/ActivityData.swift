@@ -8,6 +8,10 @@ struct Position: Sendable {
     var totalReturn: Double { value - costBasis }
     var totalReturnPercent: Double { costBasis > 0 ? totalReturn / costBasis * 100 : 0 }
     let portfolioShare: Double // 0...1
+    /// Profit or loss already locked in from past sells.
+    let realized: Double
+    /// Change in value since the open of the day, from the 24h move.
+    let todayReturn: Double
 }
 
 struct Transaction: Identifiable, Sendable {
@@ -54,7 +58,9 @@ extension Asset {
             amount: holding.amount,
             value: holding.value,
             averageCost: price / (2.1 - returnFactor),
-            portfolioShare: holding.value / SampleData.totalBalance
+            portfolioShare: holding.value / SampleData.totalBalance,
+            realized: holding.value * (rng.next() * 0.12 - 0.03),
+            todayReturn: holding.value - holding.value / (1 + change24h / 100)
         )
     }
 

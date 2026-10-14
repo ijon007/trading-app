@@ -126,39 +126,72 @@ struct CoinDetailSheet: View {
     // MARK: Position
 
     private func positionCard(_ p: Position) -> some View {
-        let tint = p.totalReturn >= 0 ? Theme.positive : Theme.negative
+        let up = p.totalReturn >= 0
+        let tint = up ? Theme.positive : Theme.negative
         return VStack(alignment: .leading, spacing: Space.md) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Your position").font(Typo.headline).foregroundStyle(Theme.textPrimary)
+            HStack(spacing: Space.xs) {
+                CoinIcon(symbol: asset.symbol, size: 22)
+                Text(asset.symbol).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                 Spacer()
-                Text("\(p.amount.formatted(.number.precision(.fractionLength(0...4)))) \(asset.symbol)")
-                    .font(Typo.figure).foregroundStyle(Theme.textSecondary)
+                HStack(spacing: 6) {
+                    Circle().fill(Theme.positive).frame(width: 6, height: 6)
+                    Text("Open").font(Typo.caption).foregroundStyle(Theme.textPrimary)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Theme.surfaceHi, in: .capsule)
             }
-            Text(p.value.fiat)
-                .font(.system(size: 28, weight: .semibold).monospacedDigit())
-                .tracking(-0.6)
-                .foregroundStyle(Theme.textPrimary)
-            Grid(alignment: .leading, horizontalSpacing: Space.lg, verticalSpacing: Space.sm) {
-                GridRow {
-                    stat("Average cost", p.averageCost.fiat)
-                    stat("Portfolio", p.portfolioShare.formatted(.percent.precision(.fractionLength(1))))
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: Space.xxs) {
+                    Text(p.value.fiat)
+                        .font(.system(size: 28, weight: .semibold).monospacedDigit())
+                        .tracking(-0.6)
+                        .foregroundStyle(Theme.textPrimary)
+                        .contentTransition(.numericText())
+                    Text("\(p.amount.formatted(.number.precision(.fractionLength(0...5)))) \(asset.symbol)")
+                        .font(Typo.figure).foregroundStyle(Theme.textSecondary)
                 }
-                GridRow {
-                    stat("Total return", (p.totalReturn >= 0 ? "+" : "−") + abs(p.totalReturn).fiat, tint: tint)
-                    stat("Return", p.totalReturnPercent.percent, tint: tint)
+                Spacer(minLength: Space.sm)
+                VStack(alignment: .trailing, spacing: Space.xxs) {
+                    Text(signed(p.totalReturn))
+                        .font(.system(size: 28, weight: .semibold).monospacedDigit())
+                        .tracking(-0.6)
+                        .foregroundStyle(tint)
+                        .contentTransition(.numericText())
+                    HStack(spacing: 4) {
+                        Image(systemName: up ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(tint)
+                        Text(p.totalReturnPercent.percent)
+                            .font(Typo.figure).foregroundStyle(Theme.textPrimary)
+                    }
                 }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            }
+            DashedLine()
+                .stroke(Theme.hairline, style: StrokeStyle(lineWidth: 1, dash: [6, 5]))
+                .frame(height: 1)
+            VStack(spacing: Space.xs) {
+                positionRow("Today's return", signed(p.todayReturn), tint: p.todayReturn >= 0 ? Theme.positive : Theme.negative)
+                positionRow("Amount invested", p.costBasis.fiat)
+                positionRow("Realized", signed(p.realized), tint: p.realized >= 0 ? Theme.positive : Theme.negative)
             }
         }
         .padding(Space.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: Radius.lg))
+        .background(Theme.surface, in: .rect(cornerRadius: Radius.lg))
+        .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Theme.hairline, lineWidth: 1))
         .accessibilityElement(children: .combine)
     }
 
-    private func stat(_ title: String, _ value: String, tint: Color = Theme.textPrimary) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(title).font(Typo.caption).foregroundStyle(Theme.textSecondary)
-            Text(value).font(Typo.figure).foregroundStyle(tint).lineLimit(1).minimumScaleFactor(0.8)
+    private func signed(_ v: Double) -> String { (v >= 0 ? "+" : "−") + abs(v).fiat }
+
+    private func positionRow(_ title: String, _ value: String, tint: Color = Theme.textPrimary) -> some View {
+        HStack {
+            Text(title).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+            Spacer()
+            Text(value).font(Typo.figure).foregroundStyle(tint).contentTransition(.numericText())
         }
     }
 
@@ -269,5 +302,12 @@ struct CoinDetailSheet: View {
         .padding(.horizontal, Space.md)
         .padding(.top, Space.xs)
         .padding(.bottom, Space.xs)
+    }
+}
+
+/// A horizontal line path, used for the dashed divider.
+private struct DashedLine: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { $0.move(to: CGPoint(x: 0, y: rect.midY)); $0.addLine(to: CGPoint(x: rect.maxX, y: rect.midY)) }
     }
 }
