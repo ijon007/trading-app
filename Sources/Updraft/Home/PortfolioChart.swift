@@ -21,10 +21,13 @@ struct PortfolioHeader: View {
         let end = points.last?.price ?? SampleData.totalBalance
         let selected = selectedIndex.flatMap { points.indices.contains($0) ? points[$0] : nil }
         let tint = end >= start ? Theme.positive : Theme.negative
+        // An empty account has no history: show 0 without a chart or timeframes.
+        let isEmpty = SampleData.holdings.isEmpty
 
         VStack(spacing: Space.md) {
-            BalanceSummary(value: selected?.price ?? end, start: start,
-                           date: selected?.date, timeframe: timeframe)
+            BalanceSummary(value: isEmpty ? 0 : selected?.price ?? end, start: isEmpty ? 0 : start,
+                           date: selected?.date, timeframe: timeframe, showsChange: !isEmpty)
+            if !isEmpty {
             // Stable identity: an .id(timeframe) swap inside this List row made the
             // cell reload (whole header flashed) on the first scrub after a switch.
             // Drop the animation instead so marks don't interpolate between series.
@@ -36,6 +39,7 @@ struct PortfolioHeader: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, Space.md)
+            }
         }
         .sensoryFeedback(.selection, trigger: timeframe)
         .sensoryFeedback(.selection, trigger: selectedIndex) { _, new in new != nil }
@@ -50,6 +54,7 @@ private struct BalanceSummary: View {
     let start: Double
     let date: Date?
     let timeframe: Timeframe
+    var showsChange = true
 
     var body: some View {
         let delta = value - start
@@ -73,6 +78,7 @@ private struct BalanceSummary: View {
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
                 .padding(.horizontal, Space.md)
+            if showsChange {
             HStack(spacing: Space.xxs) {
                 Image(systemName: delta >= 0 ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
                     .font(.system(size: 9))
@@ -94,6 +100,7 @@ private struct BalanceSummary: View {
             .foregroundStyle(delta >= 0 ? Theme.positive : Theme.negative)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
+            }
         }
         // Short and snappy so scrubbing keeps up with the finger.
         .animation(.snappy(duration: 0.15), value: value)
