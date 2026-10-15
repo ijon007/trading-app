@@ -34,53 +34,56 @@ struct AddAccountSheet: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.lg) {
                     Picker("Type", selection: $mode.animation(.smooth(duration: 0.3))) {
                         ForEach(Mode.allCases) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-                }
 
-                Section("Name") {
-                    TextField("Account name", text: $name)
-                        .font(Typo.body)
-                        .foregroundStyle(Theme.textPrimary)
-                        .textInputAutocapitalization(.words)
-                        .submitLabel(.done)
-                }
-                .listRowBackground(Theme.surface)
-
-                Section("Icon") {
-                    symbolGrid
-                }
-                .listRowBackground(Theme.surface)
-
-                if mode == .importWallet {
-                    Section {
-                        TextField("Recovery phrase or private key", text: $secret, axis: .vertical)
-                            .font(Typo.body.monospaced())
+                    field("Name") {
+                        TextField("Account name", text: $name)
+                            .font(Typo.body)
                             .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(3...6)
-                            .textInputAutocapitalization(.never)
-                            .autocorrectionDisabled()
-                            .focused($focused)
-                    } header: {
-                        Text("Recovery phrase or private key")
-                    } footer: {
-                        Label(secretKind.message, systemImage: secretKind.isValid ? "checkmark.circle.fill" : "info.circle")
-                            .font(Typo.caption)
-                            .foregroundStyle(secretKind.isValid ? Theme.positive : Theme.textSecondary)
-                            .contentTransition(.interpolate)
-                            .animation(.smooth(duration: 0.2), value: secretKind.isValid)
+                            .textInputAutocapitalization(.words)
+                            .submitLabel(.done)
+                            .padding(Space.md)
+                            .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
                     }
-                    .listRowBackground(Theme.surface)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+
+                    field("Icon") {
+                        symbolGrid
+                            .padding(Space.md)
+                            .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
+                    }
+
+                    if mode == .importWallet {
+                        field("Recovery phrase or private key") {
+                            VStack(alignment: .leading, spacing: Space.xs) {
+                                TextField("Paste it here", text: $secret, axis: .vertical)
+                                    .font(Typo.body.monospaced())
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .lineLimit(3...6)
+                                    .textInputAutocapitalization(.never)
+                                    .autocorrectionDisabled()
+                                    .focused($focused)
+                                    .padding(Space.md)
+                                    .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
+                                Label(secretKind.message, systemImage: secretKind.isValid ? "checkmark.circle.fill" : "info.circle")
+                                    .font(Typo.caption)
+                                    .foregroundStyle(secretKind.isValid ? Theme.positive : Theme.textSecondary)
+                                    .contentTransition(.interpolate)
+                                    .animation(.smooth(duration: 0.2), value: secretKind.isValid)
+                            }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
                 }
+                .padding(.horizontal, Space.md)
+                .padding(.top, Space.xs)
+                .padding(.bottom, Space.md)
             }
-            .scrollContentBackground(.hidden)
+            .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .background(Theme.background)
             .navigationTitle("Add account")
@@ -98,8 +101,16 @@ struct AddAccountSheet: View {
         .presentationDragIndicator(.visible)
     }
 
+    /// Section label above a surface card, as in the other Updraft sheets.
+    private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text(title).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+            content()
+        }
+    }
+
     private var symbolGrid: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.sm), count: 6), spacing: Space.sm) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.xs), count: 6), spacing: Space.sm) {
             ForEach(Self.symbols, id: \.self) { s in
                 let selected = s == symbol
                 Button {
@@ -118,7 +129,6 @@ struct AddAccountSheet: View {
                 .accessibilityAddTraits(selected ? .isSelected : [])
             }
         }
-        .padding(.vertical, Space.xs)
     }
 
     private var submitButton: some View {
