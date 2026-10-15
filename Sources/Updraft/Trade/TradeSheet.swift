@@ -163,8 +163,6 @@ struct TradeSheet: View {
             .padding(.horizontal, Space.md)
             .padding(.bottom, Space.xs)
             .background(Theme.background)
-            .dropdownPanel(isOpen: $methodsOpen, options: methodOptions,
-                           selection: Binding(get: { method?.id }, set: { paymentID = $0 }))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .close) { dismiss() }
@@ -174,7 +172,7 @@ struct TradeSheet: View {
                         ForEach(TradeSide.allCases) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    .fixedSize()
+                    .frame(width: 180)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)

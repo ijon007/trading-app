@@ -51,8 +51,9 @@ extension OptionRowLabel where Accessory == EmptyView {
 
 // MARK: - Field
 
-/// Tappable row showing the current choice. Pair it with `.dropdownPanel(...)` on a
-/// container view; the panel floats below this field and closes on an outside tap.
+/// Tappable glass row showing the current choice. On open its glass morphs into a
+/// floating panel of options (iOS 26 glass morph); tapping outside closes it.
+/// Raises itself above sibling views while open.
 struct Dropdown<ID: Hashable>: View {
     var caption: String? = nil
     let options: [DropdownOption<ID>]
@@ -60,12 +61,42 @@ struct Dropdown<ID: Hashable>: View {
     @Binding var isOpen: Bool
     var placeholder: String = "Choose"
 
+    @Namespace private var glass
+    @State private var rowHeight: CGFloat = 0
+
     private var current: DropdownOption<ID>? { options.first { $0.id == selection } }
 
+    static var spring: Animation { .spring(duration: 0.4, bounce: 0.22) }
+
     var body: some View {
+        GlassEffectContainer(spacing: Space.xs) {
+            field
+                .overlay(alignment: .top) {
+                    if isOpen {
+                        DropdownPanel(options: options, selection: $selection, isOpen: $isOpen)
+                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radius.lg))
+                            .glassEffectID("panel", in: glass)
+                            .glassEffectTransition(.matchedGeometry)
+                            .offset(y: rowHeight + Space.xs)
+                    }
+                }
+        }
+        // Outside-tap catcher: a large clear layer behind the field while open.
+        .background {
+            if isOpen {
+                Color.clear
+                    .frame(width: 4_000, height: 4_000)
+                    .contentShape(.rect)
+                    .onTapGesture { close() }
+            }
+        }
+        .zIndex(isOpen ? 1 : 0)
+    }
+
+    private var field: some View {
         Button {
             Haptics.tap()
-            withAnimation(Dropdown.spring) { isOpen.toggle() }
+            withAnimation(Self.spring) { isOpen.toggle() }
         } label: {
             OptionRowLabel(caption: caption, title: current?.title ?? placeholder,
                            subtitle: current?.subtitle, icon: current?.icon) {
@@ -75,57 +106,31 @@ struct Dropdown<ID: Hashable>: View {
                     .rotationEffect(.degrees(isOpen ? 180 : 0))
             }
             .padding(Space.sm)
-            .surfaceCard(radius: Radius.md)
         }
         .buttonStyle(.plain)
-        .anchorPreference(key: DropdownAnchorKey.self, value: .bounds) { $0 }
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radius.md))
+        .glassEffectID("field", in: glass)
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowHeight = $0 }
         .accessibilityValue(current?.title ?? placeholder)
         .accessibilityHint(isOpen ? "Collapses the list" : "Shows the options")
     }
 
-    static var spring: Animation { .spring(duration: 0.35, bounce: 0.18) }
-}
-
-struct DropdownAnchorKey: PreferenceKey {
-    static let defaultValue: Anchor<CGRect>? = nil
-    static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
-        value = nextValue() ?? value
+    private func close() {
+        withAnimation(Self.spring) { isOpen = false }
     }
 }
 
 // MARK: - Panel
 
-extension View {
-    /// Floating option panel for the `Dropdown` inside this view. Tapping outside closes it.
-    func dropdownPanel<ID: Hashable>(isOpen: Binding<Bool>, options: [DropdownOption<ID>],
-                                     selection: Binding<ID?>) -> some View {
-        overlayPreferenceValue(DropdownAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                if isOpen.wrappedValue, let anchor {
-                    let field = proxy[anchor]
-                    ZStack(alignment: .topLeading) {
-                        Color.clear
-                            .contentShape(.rect)
-                            .onTapGesture { withAnimation(Dropdown<ID>.spring) { isOpen.wrappedValue = false } }
-                        DropdownPanel(options: options, selection: selection, isOpen: isOpen)
-                            .frame(width: field.width)
-                            .offset(x: field.minX, y: field.maxY + Space.xs)
-                            .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
-                    }
-                }
-            }
-        }
-    }
-}
-
 private struct DropdownPanel<ID: Hashable>: View {
     let options: [DropdownOption<ID>]
     @Binding var selection: ID?
     @Binding var isOpen: Bool
+    @State private var revealed = false
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(options) { option in
+            ForEach(Array(options.enumerated()), id: \.element.id) { index, option in
                 Button {
                     Haptics.select()
                     withAnimation(Dropdown<ID>.spring) {
@@ -144,11 +149,15 @@ private struct DropdownPanel<ID: Hashable>: View {
                 }
                 .buttonStyle(DropdownRowStyle())
                 .accessibilityAddTraits(option.id == selection ? .isSelected : [])
+                // Springy staggered reveal, top to bottom.
+                .opacity(revealed ? 1 : 0)
+                .offset(y: revealed ? 0 : -Space.xs)
+                .scaleEffect(revealed ? 1 : 0.97, anchor: .top)
+                .animation(.spring(duration: 0.4, bounce: 0.3).delay(0.05 + Double(index) * 0.045), value: revealed)
             }
         }
         .padding(Space.xxs)
-        // Floats over content, so it's the one place glass is right here.
-        .glassEffect(.regular, in: .rect(cornerRadius: Radius.lg))
+        .onAppear { revealed = true }
     }
 }
 
