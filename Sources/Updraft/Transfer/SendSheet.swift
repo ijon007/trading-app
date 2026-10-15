@@ -14,6 +14,8 @@ struct SendDraft: Hashable {
     var value: Double { amount * asset.price }
 }
 
+private struct TransferTarget: Identifiable { let id: String }
+
 /// Addresses sent to before, so review can flag a new one.
 enum SendRecipients {
     private static let key = "send.recipients.v1"
@@ -54,6 +56,8 @@ struct SendSheet: View {
     @State private var amountText = ""
     @State private var inFiat = false
     @State private var review: SendDraft?
+    /// "My accounts" pick: opens an internal transfer to that account.
+    @State private var internalTo: String?
     /// Looking up an ENS recipient, and the last failure.
     @State private var resolving = false
     @State private var resolveError: String?
@@ -114,6 +118,9 @@ struct SendSheet: View {
                     Button("Close", systemImage: "xmark") { dismiss() }
                 }
             }
+            .sheet(item: Binding(get: { internalTo.map(TransferTarget.init) }, set: { internalTo = $0?.id })) { target in
+                InternalTransferSheet(fromID: Account.current.id, toID: target.id, symbol: asset.id) { dismiss() }
+            }
             .navigationDestination(item: $review) { draft in
                 SendReviewStep(draft: draft) { dismiss() }
             }
@@ -171,7 +178,41 @@ struct SendSheet: View {
             }
         }
         .onChange(of: address) { resolveError = nil }
+        .safeAreaInset(edge: .bottom, spacing: Space.sm) { myAccounts }
         .animation(.smooth(duration: 0.2), value: resolveError)
+    }
+
+    /// Other accounts as quick recipients; picking one switches to a transfer.
+    @ViewBuilder
+    private var myAccounts: some View {
+        let others = Account.all.filter { $0.id != Account.current.id }
+        if !others.isEmpty, !Account.current.isWatchOnly {
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text("My accounts").font(Typo.caption).foregroundStyle(Theme.textSecondary)
+                ScrollView(.horizontal) {
+                    HStack(spacing: Space.xs) {
+                        ForEach(others) { a in
+                            Button {
+                                Haptics.tap()
+                                internalTo = a.id
+                            } label: {
+                                HStack(spacing: Space.xs) {
+                                    AccountAvatar(account: a, size: 22)
+                                    Text(a.name).font(Typo.callout).foregroundStyle(Theme.textPrimary)
+                                }
+                                .padding(.leading, 4)
+                                .padding(.trailing, Space.sm)
+                                .padding(.vertical, 4)
+                                .overlay(Capsule().strokeBorder(Theme.hairline))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+                .scrollIndicators(.hidden)
+            }
+            .padding(.top, Space.xs)
+        }
     }
 
     // MARK: Amount
