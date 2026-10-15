@@ -23,12 +23,12 @@ struct PortfolioHeader: View {
         VStack(spacing: Space.md) {
             BalanceSummary(value: selected?.price ?? end, start: start,
                            date: selected?.date, timeframe: timeframe)
-            ZStack {
-                ScrubbableChart(points: points, tint: tint, selectedIndex: $selectedIndex)
-                    .id(timeframe) // fresh chart per timeframe: no marks interpolating between series
-                    .transition(.opacity)
-            }
-            .frame(height: 180)
+            // Stable identity: an .id(timeframe) swap inside this List row made the
+            // cell reload (whole header flashed) on the first scrub after a switch.
+            // Drop the animation instead so marks don't interpolate between series.
+            ScrubbableChart(points: points, tint: tint, selectedIndex: $selectedIndex)
+                .transaction(value: timeframe) { $0.animation = nil }
+                .frame(height: 180)
             Picker("Timeframe", selection: $timeframe.animation(.easeInOut(duration: 0.2))) {
                 ForEach(Timeframe.allCases) { Text($0.rawValue).tag($0) }
             }
