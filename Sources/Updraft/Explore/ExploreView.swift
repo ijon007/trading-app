@@ -144,7 +144,8 @@ struct GainersMarquee: View {
                 cards.padding(.horizontal, Space.md)
             }
             .scrollIndicators(.hidden)
-            .padding(.vertical, Space.xs)
+            .scrollClipDisabled()
+            .padding(.vertical, Space.md)
         } else {
             TimelineView(.animation(paused: pauseStart != nil || period == 0)) { context in
                 HStack(spacing: 0) {
@@ -161,8 +162,9 @@ struct GainersMarquee: View {
                 .offset(x: -offset(at: context.date))
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(height: GainerCard.height + Space.md)
-            .clipped()
+            // Room above and below for the glass shadow; no clipping, so it fades out naturally.
+            .padding(.vertical, Space.md)
+            .frame(height: GainerCard.height + Space.md * 2)
             .contentShape(.rect)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
