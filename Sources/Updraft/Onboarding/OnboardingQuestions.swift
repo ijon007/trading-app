@@ -12,7 +12,18 @@ struct OnboardingQuestions: View {
 
     @State private var step: Step = .name
     @State private var forward = true
-    @FocusState private var focused: Bool
+    /// One focus value shared by all steps, so moving Name to Email hands
+    /// focus straight over and the keyboard never drops.
+    enum Field: Hashable { case name, email }
+    @FocusState private var focused: Field?
+
+    private func field(for step: Step) -> Field? {
+        switch step {
+        case .name: .name
+        case .email: .email
+        default: nil
+        }
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var progress: Double { Double(step.rawValue + 1) / Double(Step.allCases.count) }
@@ -29,6 +40,10 @@ struct OnboardingQuestions: View {
             bottomBar
         }
         .animation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.4, bounce: 0), value: step)
+        // Steps manage the keyboard themselves; the app-wide tap-to-dismiss
+        // would otherwise resign it when Continue is tapped.
+        .onAppear { KeyboardDismissal.isEnabled = false }
+        .onDisappear { KeyboardDismissal.isEnabled = true }
     }
 
     /// A short, directional slide: enters from the side you're heading to,
@@ -147,9 +162,9 @@ struct OnboardingQuestions: View {
 
     private func next() {
         guard isValid else { return }
-        focused = false
         if let n = Step(rawValue: step.rawValue + 1) {
             forward = true
+            focused = field(for: n)
             step = n
         } else {
             onFinish()
@@ -157,9 +172,9 @@ struct OnboardingQuestions: View {
     }
 
     private func back() {
-        focused = false
         if let p = Step(rawValue: step.rawValue - 1) {
             forward = false
+            focused = field(for: p)
             step = p
         } else {
             onBackFromStart()
@@ -236,11 +251,11 @@ struct OnboardingQuestions: View {
                 .foregroundStyle(Theme.textPrimary)
                 .textContentType(.givenName)
                 .submitLabel(.continue)
-                .focused($focused)
+                .focused($focused, equals: .name)
                 .onSubmit(next)
                 .padding(.vertical, Space.sm)
-                .overlay(alignment: .bottom) { underline(active: focused) }
-                .onAppear { focused = true }
+                .overlay(alignment: .bottom) { underline(active: focused == .name) }
+                .onAppear { focused = .name }
             Text(first.isEmpty ? " " : "Nice to meet you, \(first).")
                 .font(.system(size: 15, weight: .regular))
                 .foregroundStyle(Theme.textSecondary)
@@ -268,7 +283,7 @@ struct OnboardingQuestions: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.continue)
-                    .focused($focused)
+                    .focused($focused, equals: .email)
                     .onSubmit(next)
                 Image(systemName: ok ? "checkmark.circle.fill" : "circle.dashed")
                     .font(.system(size: 18))
@@ -276,8 +291,8 @@ struct OnboardingQuestions: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .padding(.vertical, Space.sm)
-            .overlay(alignment: .bottom) { underline(active: focused) }
-            .onAppear { focused = true }
+            .overlay(alignment: .bottom) { underline(active: focused == .email) }
+            .onAppear { focused = .email }
             Text(emailValid ? " " : "Add the full address, like name@example.com.")
                 .font(.system(size: 14, weight: .regular))
                 .foregroundStyle(Theme.negative)

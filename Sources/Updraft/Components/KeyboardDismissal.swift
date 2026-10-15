@@ -6,6 +6,9 @@ import UIKit
 /// rows and gestures underneath behave exactly as before. Covers sheets too,
 /// since they present in the same window.
 struct KeyboardDismissal: UIViewRepresentable {
+    /// Screens that manage focus themselves can switch this off while visible.
+    @MainActor static var isEnabled = true
+
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> UIView {
@@ -41,6 +44,7 @@ struct KeyboardDismissal: UIViewRepresentable {
 
         nonisolated func gestureRecognizer(_ g: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
             MainActor.assumeIsolated {
+                guard KeyboardDismissal.isEnabled else { return false }
                 // Let taps inside text inputs (and their clear buttons) keep focus.
                 var view = touch.view
                 while let v = view {
