@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ExploreView: View {
     enum Filter: String, CaseIterable { case trending = "Trending", top = "Top", gainers = "Gainers" }
-    @State private var filter: Filter = .trending
+    @AppStorage("explore.filter") private var filter: Filter = .trending
     @State private var query = ""
     @State private var selected: Asset?
     /// Read so the screen redraws in the new currency.
