@@ -12,6 +12,7 @@ struct AccountsDrawer: View {
     /// Sheet fits its rows (capped at large), so there's no empty space below.
     @State private var fittedHeight: CGFloat = 320
     @State private var detent: PresentationDetent = .height(320)
+    @Namespace private var selection
 
     var body: some View {
         NavigationStack {
@@ -19,8 +20,8 @@ struct AccountsDrawer: View {
                 ForEach(Account.all) { account in
                     Button { select(account) } label: { row(account) }
                         .buttonStyle(.plain)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparatorTint(Theme.hairline)
+                        .listRowBackground(highlight(account.id == accountID))
+                        .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 10, leading: Space.md, bottom: 10, trailing: Space.md))
                         .swipeActions(edge: .trailing) {
                             if Account.all.count > 1 {
@@ -50,13 +51,16 @@ struct AccountsDrawer: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
-                .listRowInsets(EdgeInsets(top: 12, leading: Space.md, bottom: 12, trailing: Space.md))
+                .listRowInsets(EdgeInsets(top: 12, leading: Space.md, bottom: 4, trailing: Space.md))
             }
             .listStyle(.plain)
             .environment(\.defaultMinListRowHeight, 0)
             .contentMargins(.vertical, 0, for: .scrollContent)
             .onScrollGeometryChange(for: CGFloat.self) { geo in
-                (geo.contentSize.height + geo.contentInsets.top + geo.contentInsets.bottom).rounded()
+                // The bottom inset includes the tab bar this sheet covers. Counting
+                // it opens a blank band under the last row; keep only a short pad.
+                let bottom = min(geo.contentInsets.bottom, Space.xs)
+                return (geo.contentSize.height + geo.contentInsets.top + bottom).rounded()
             } action: { _, h in
                 // Same as AddAccountSheet: follow content height while on the fitted detent.
                 guard h > 0, abs(h - fittedHeight) > 1 else { return }
@@ -108,14 +112,24 @@ struct AccountsDrawer: View {
             Text(hideAmounts ? "••••" : account.totalBalance.fiat)
                 .font(Typo.figure)
                 .foregroundStyle(Theme.textPrimary)
-            Image(systemName: "checkmark")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Theme.textPrimary)
-                .opacity(account.id == accountID ? 1 : 0)
         }
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(account.id == accountID ? .isSelected : [])
+    }
+
+    /// Soft rounded highlight behind the selected row; slides between rows on switch.
+    @ViewBuilder
+    private func highlight(_ selected: Bool) -> some View {
+        if selected {
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.primary.opacity(0.06))
+                .padding(.horizontal, Space.xs)
+                .padding(.vertical, 2)
+                .matchedGeometryEffect(id: "selected", in: selection)
+        } else {
+            Color.clear
+        }
     }
 
     private func select(_ account: Account) {
