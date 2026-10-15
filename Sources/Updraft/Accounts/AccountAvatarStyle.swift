@@ -18,7 +18,6 @@ enum AccountPalette {
         }
     }
 
-    static let emojis = ["🚀", "💎", "🌱", "🔥", "🌙", "⚡️", "🐳", "🦊", "🎯", "🏦", "🌊", "🍀"]
 }
 
 /// Device owner check: Face ID, falling back to the device passcode.
@@ -79,26 +78,6 @@ struct PhraseGrid: View {
         }
         .privacySensitive()
         .accessibilityLabel(revealed ? words.joined(separator: " ") : "Hidden recovery phrase. Double tap to reveal.")
-    }
-}
-
-extension Account {
-    /// Owned accounts without keys yet (the built-in samples) get a mock phrase
-    /// and address on first use. Returns the phrase, or nil for watch-only.
-    @discardableResult
-    static func ensureKeys(_ id: String) -> [String]? {
-        guard let account = all.first(where: { $0.id == id }), !account.isWatchOnly else { return nil }
-        let words = Wallet.service.phrase(for: id) ?? {
-            let new = Wallet.service.generatePhrase()
-            Wallet.service.storePhrase(new, for: id)
-            return new
-        }()
-        if account.address == nil {
-            var updated = account
-            updated.address = Wallet.service.address(forPhrase: words)
-            update(updated)
-        }
-        return words
     }
 }
 

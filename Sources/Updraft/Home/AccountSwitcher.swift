@@ -4,28 +4,14 @@ import SwiftUI
 /// opening a native menu of accounts with their balances.
 struct AccountSwitcher: View {
     @Binding var accountID: String
-    /// Privacy mode (swe): balances in the menu show as dots while on.
-    @AppStorage(PrivacyMode.storageKey) private var hideAmounts = false
-    @State private var addingAccount = false
-    @State private var managing = false
+    @State private var open = false
 
     private var current: Account { Account.all.first { $0.id == accountID } ?? Account.all[0] }
 
     var body: some View {
-        Menu {
-            Section("Accounts") {
-                ForEach(Account.all) { account in
-                    Button {
-                        select(account)
-                    } label: {
-                        Text(account.name)
-                        Text(hideAmounts ? "••••" : account.totalBalance.fiat)
-                        Image(systemName: account.id == current.id ? "checkmark" : account.symbol)
-                    }
-                }
-                Button { Haptics.tap(); addingAccount = true } label: { Text("Add account"); Image(systemName: "plus") }
-            }
-            Button { Haptics.tap(); managing = true } label: { Text("Manage accounts"); Image(systemName: "slider.horizontal.3") }
+        Button {
+            Haptics.tap()
+            open = true
         } label: {
             HStack(spacing: Space.xs) {
                 AccountAvatar(account: current, size: 26)
@@ -42,22 +28,10 @@ struct AccountSwitcher: View {
             .padding(.vertical, 4)
             .glassEffect(.regular.interactive(), in: .capsule)
         }
-        .menuOrder(.fixed)
-        .sheet(isPresented: $addingAccount) { AddAccountSheet { Account.add($0); select($0) } }
-        .sheet(isPresented: $managing) {
-            NavigationStack {
-                ManageAccountsView()
-                    .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Done") { managing = false } } }
-            }
-        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $open) { AccountsDrawer(accountID: $accountID) }
         .accessibilityLabel("Account, \(current.name)")
         .accessibilityHint("Switch account")
-    }
-
-    private func select(_ account: Account) {
-        guard account.id != accountID else { return }
-        // One spring for the whole Home: name, balance digits, chart line and rows.
-        withAnimation(.spring(duration: 0.45, bounce: 0)) { accountID = account.id }
     }
 }
 
