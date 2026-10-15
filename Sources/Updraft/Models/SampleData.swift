@@ -30,13 +30,8 @@ enum SampleData {
 
     static func asset(_ s: String) -> Asset { assets.first { $0.id == s }! }
 
-    static let holdings: [Holding] = [
-        Holding(asset: asset("BTC"), amount: 0.4821),
-        Holding(asset: asset("ETH"), amount: 6.25),
-        Holding(asset: asset("SOL"), amount: 84.0),
-        Holding(asset: asset("LINK"), amount: 310.0),
-        Holding(asset: asset("ADA"), amount: 4_200.0),
-    ]
+    /// Holdings of the selected account; everything else derives from this.
+    static var holdings: [Holding] { Account.current.holdings }
 
     static var totalBalance: Double { holdings.reduce(0) { $0 + $1.value } }
     static var totalChange24h: Double {

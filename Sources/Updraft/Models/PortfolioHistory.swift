@@ -3,9 +3,9 @@ import Foundation
 extension SampleData {
     /// Portfolio value over a timeframe: each holding's amount times its price
     /// series, summed point by point. The last point equals `totalBalance`.
-    /// Cached per timeframe (via the cached coin series), so views can read it freely.
+    /// Cached per account and timeframe (via the cached coin series), so views can read it freely.
     static func balanceSeries(_ timeframe: Timeframe) -> [PricePoint] {
-        SeriesCache.shared.value(for: "portfolio|\(timeframe.rawValue)") {
+        SeriesCache.shared.value(for: "portfolio|\(Account.current.id)|\(timeframe.rawValue)") {
             let series = holdings.map { ($0.amount, $0.asset.series(timeframe)) }
             guard let dates = series.first?.1.map(\.date) else { return [] }
             return dates.indices.map { i in
