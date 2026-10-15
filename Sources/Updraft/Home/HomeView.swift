@@ -49,8 +49,25 @@ struct HomeView: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
                 }
+                if !Watchlist.shared.ids.isEmpty {
+                    Section {
+                        ForEach(Watchlist.shared.assets) { asset in
+                            AssetRow(asset: asset)
+                                .contentShape(Rectangle())
+                                .onTapGesture { Haptics.tap(); selected = SampleData.asset(asset.id) }
+                                .listRowBackground(Color.clear)
+                                .listRowSeparatorTint(Theme.hairline)
+                                .listRowInsets(EdgeInsets(top: Space.row, leading: Space.md, bottom: Space.row, trailing: Space.md))
+                        }
+                    } header: {
+                        Text("Watchlist")
+                            .font(Typo.headline)
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                }
             }
             .listStyle(.plain)
+            .animation(.snappy, value: Watchlist.shared.ids)
             .marketLoading(!MarketStore.shared.hasLoaded)
             .safeAreaInset(edge: .bottom) { MarketStatusBanner() }
             .animation(.easeOut(duration: 0.25), value: MarketStore.shared.status)
