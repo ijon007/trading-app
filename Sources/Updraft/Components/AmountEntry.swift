@@ -68,8 +68,7 @@ struct AmountDisplay: View {
     var body: some View {
         VStack(spacing: Space.sm) {
             Text(amount)
-                .font(.system(size: 64, weight: .semibold).monospacedDigit())
-                .tracking(-2)
+                .heroNumeral()
                 .foregroundStyle(isError ? Theme.negative : Theme.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.4)
@@ -80,9 +79,9 @@ struct AmountDisplay: View {
                     view.offset(x: x)
                 } keyframes: { _ in
                     KeyframeTrack {
-                        LinearKeyframe(-10, duration: 0.05)
-                        LinearKeyframe(9, duration: 0.07)
-                        LinearKeyframe(-6, duration: 0.07)
+                        LinearKeyframe(-Space.sm, duration: 0.05)
+                        LinearKeyframe(Space.xs, duration: 0.07)
+                        LinearKeyframe(-Space.xxs, duration: 0.07)
                         SpringKeyframe(0, duration: 0.2)
                     }
                 }
@@ -97,7 +96,7 @@ struct AmountDisplay: View {
                     } label: {
                         HStack(spacing: Space.xxs) {
                             Text(secondary).font(Typo.figure).contentTransition(.numericText())
-                            Image(systemName: "arrow.up.arrow.down").font(.system(size: 12, weight: .semibold))
+                            Image(systemName: "arrow.up.arrow.down").font(Typo.caption)
                         }
                         .foregroundStyle(Theme.textSecondary)
                     }
@@ -138,8 +137,8 @@ struct AmountChips: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Space.xs)
                         .foregroundStyle(chip.isSelected ? Theme.background : Theme.textPrimary)
-                        .background(chip.isSelected ? Theme.accent : Theme.surfaceHi, in: .rect(cornerRadius: Radius.sm))
-                        .contentShape(.rect)
+                        .background(chip.isSelected ? Theme.accent : Theme.surfaceHi, in: .capsule)
+                        .contentShape(.capsule)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(chip.isSelected ? .isSelected : [])
@@ -184,7 +183,7 @@ struct AmountKeypad: View {
         Button { press(key) } label: {
             label(for: key)
                 .foregroundStyle(Theme.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 54)
+                .frame(maxWidth: .infinity, minHeight: Space.xxl + Space.xs)
                 .contentShape(.rect)
         }
         .buttonStyle(KeypadKeyStyle())
@@ -201,9 +200,9 @@ struct AmountKeypad: View {
 
     @ViewBuilder private func label(for key: AmountInput.Key) -> some View {
         switch key {
-        case .digit(let d): Text(String(d)).font(.system(size: 28, weight: .medium).monospacedDigit())
-        case .decimal: Text(".").font(.system(size: 28, weight: .medium))
-        case .delete: Image(systemName: "delete.left").font(.system(size: 22, weight: .medium))
+        case .digit(let d): Text(String(d)).font(Typo.title.monospacedDigit())
+        case .decimal: Text(".").font(Typo.title)
+        case .delete: Image(systemName: "delete.left").font(Typo.headline)
         }
     }
 

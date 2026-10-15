@@ -42,7 +42,7 @@ struct TradeReview<Header: View>: View {
                 .font(emphasized ? Typo.headline : Typo.callout)
                 .foregroundStyle(emphasized ? Theme.textPrimary : Theme.textSecondary)
             Spacer(minLength: Space.sm)
-            VStack(alignment: .trailing, spacing: 2) {
+            VStack(alignment: .trailing, spacing: Space.xxs) {
                 Text(row.value)
                     .font(emphasized ? Typo.headline.monospacedDigit() : Typo.figure)
                     .foregroundStyle(row.tint)
@@ -52,7 +52,7 @@ struct TradeReview<Header: View>: View {
                 }
             }
         }
-        .padding(.vertical, Space.row + 2)
+        .padding(.vertical, Space.row)
         .accessibilityElement(children: .combine)
     }
 }
@@ -74,7 +74,8 @@ struct TradeResultView: View {
     var body: some View {
         VStack(spacing: Space.md) {
             Image(systemName: systemImage)
-                .font(.system(size: 72, weight: .semibold))
+                .font(Typo.hero)
+                .imageScale(.large)
                 .foregroundStyle(tint)
                 .symbolEffect(.bounce, value: appeared)
                 .scaleEffect(appeared ? 1 : 0.6)
@@ -87,7 +88,7 @@ struct TradeResultView: View {
                     .multilineTextAlignment(.center)
             }
             .opacity(appeared ? 1 : 0)
-            .offset(y: appeared ? 0 : 8)
+            .offset(y: appeared ? 0 : Space.xs)
         }
         .padding(.horizontal, Space.lg)
         .onAppear { withAnimation(.spring(duration: 0.45, bounce: 0.35)) { appeared = true } }
