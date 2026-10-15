@@ -14,7 +14,7 @@ struct HomeView: View {
         NavigationStack {
             List {
                 VStack(spacing: Space.lg) {
-                    balance
+                    PortfolioHeader()
                     quickActions
                 }
                 .frame(maxWidth: .infinity)
@@ -52,21 +52,6 @@ struct HomeView: View {
             }
             .background(Theme.background)
             .toolbar(.hidden, for: .navigationBar)
-        }
-    }
-
-    private var balance: some View {
-        VStack(spacing: Space.sm) {
-            Text("Total balance")
-                .font(Typo.callout)
-                .foregroundStyle(Theme.textSecondary)
-            Text(SampleData.totalBalance.fiat)
-                .heroNumeral()
-                .foregroundStyle(Theme.textPrimary)
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
-                .padding(.horizontal, Space.md)
-            ChangePill(value: SampleData.totalChange24h)
         }
     }
 
