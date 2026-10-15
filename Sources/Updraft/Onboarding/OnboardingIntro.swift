@@ -1,23 +1,76 @@
 import SwiftUI
+import Charts
 
-/// The Updraft mark: a rounded tile with an up-right arrow. Inverts with the theme.
+// MARK: - Brand
+
+/// The real Updraft app icon (bundled copy in Resources/Brand).
 struct UpdraftMark: View {
     var size: CGFloat = 88
 
+    private static let image = UIImage(named: "updraft-mark", in: .module, with: nil)
+
     var body: some View {
-        RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
-            .fill(Theme.textPrimary)
-            .frame(width: size, height: size)
-            .overlay {
-                Image(systemName: "arrow.up.right")
-                    .font(.system(size: size * 0.44, weight: .bold))
-                    .foregroundStyle(Theme.background)
+        Group {
+            if let image = Self.image {
+                Image(uiImage: image).resizable().interpolation(.high)
+            } else {
+                Color(hex: 0x0B0B0C)
             }
-            .accessibilityHidden(true)
+        }
+        .frame(width: size, height: size)
+        .clipShape(.rect(cornerRadius: size * 0.225, style: .continuous))
+        // Keeps the black tile defined on the dark background.
+        .overlay(
+            RoundedRectangle(cornerRadius: size * 0.225, style: .continuous)
+                .strokeBorder(Theme.hairline, lineWidth: 1)
+        )
+        .accessibilityHidden(true)
     }
 }
 
-/// Launch moment: mark and wordmark settle in, then hand off to Welcome.
+/// Shared type scale for onboarding: medium/semibold, never heavy.
+enum OnboardType {
+    static let display = Font.system(size: 34, weight: .semibold)
+    static let title = Font.system(size: 30, weight: .semibold)
+    static let body = Font.system(size: 17, weight: .regular)
+    static let wordmark = Font.system(size: 30, weight: .medium)
+}
+
+// MARK: - Motion helpers
+
+/// Fades and lifts content in, staggered by index, whenever `active` turns on.
+struct StaggeredAppear: ViewModifier {
+    let index: Int
+    var active: Bool = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown || reduceMotion ? 0 : 12)
+            .onChange(of: active, initial: true) { _, isActive in
+                if isActive {
+                    let animation: Animation = reduceMotion
+                        ? .easeOut(duration: 0.2)
+                        : .spring(duration: 0.5, bounce: 0).delay(0.05 + Double(index) * 0.06)
+                    withAnimation(animation) { shown = true }
+                } else {
+                    shown = false
+                }
+            }
+    }
+}
+
+extension View {
+    func staggered(_ index: Int, active: Bool = true) -> some View {
+        modifier(StaggeredAppear(index: index, active: active))
+    }
+}
+
+// MARK: - Splash
+
+/// Launch moment: the icon and wordmark settle in, then glide into Welcome.
 struct SplashView: View {
     let namespace: Namespace.ID
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -25,52 +78,55 @@ struct SplashView: View {
 
     var body: some View {
         VStack(spacing: Space.md) {
-            UpdraftMark(size: 96)
+            UpdraftMark(size: 104)
                 .matchedGeometryEffect(id: "mark", in: namespace)
-                .scaleEffect(shown || reduceMotion ? 1 : 0.86)
+                .scaleEffect(shown || reduceMotion ? 1 : 0.94)
+                .opacity(shown ? 1 : 0)
             Text("Updraft")
-                .font(.system(size: 34, weight: .bold))
-                .tracking(-0.8)
+                .font(OnboardType.wordmark)
+                .tracking(-0.6)
                 .foregroundStyle(Theme.textPrimary)
                 .matchedGeometryEffect(id: "wordmark", in: namespace)
                 .opacity(shown ? 1 : 0)
                 .offset(y: shown || reduceMotion ? 0 : 6)
+                .animation(reduceMotion ? nil : .spring(duration: 0.6, bounce: 0).delay(0.12), value: shown)
         }
-        .opacity(shown ? 1 : 0)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
-            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.6, bounce: 0)) { shown = true }
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.7, bounce: 0)) { shown = true }
         }
         .accessibilityElement()
         .accessibilityLabel("Updraft")
     }
 }
 
-/// Three short pages explaining the app.
+// MARK: - Welcome
+
+/// Three pages, each a live miniature of the app.
 struct WelcomeView: View {
     let namespace: Namespace.ID
     let onContinue: () -> Void
     @State private var page = 0
 
     private let pages: [(title: String, body: String)] = [
-        ("Your portfolio,\nat a glance", "Track every coin you own and see how it moves, day by day."),
-        ("Buy, sell\nand swap", "Trade in a few taps with clear prices and no surprises."),
-        ("Send and receive\nin seconds", "Move crypto to anyone with an address or a QR code."),
+        ("Your whole portfolio,\nat a glance", "Every coin you own in one place, with clear charts for any timeframe."),
+        ("Buy, sell and swap\nwithout the noise", "Simple trades with the price, fee and total up front."),
+        ("Send and receive\nin seconds", "Share your address as a QR code or pay anyone with theirs."),
     ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: Space.xs) {
-                UpdraftMark(size: 32)
+                UpdraftMark(size: 30)
                     .matchedGeometryEffect(id: "mark", in: namespace)
                 Text("Updraft")
-                    .font(.system(size: 20, weight: .bold))
-                    .tracking(-0.4)
+                    .font(.system(size: 19, weight: .medium))
+                    .tracking(-0.3)
                     .foregroundStyle(Theme.textPrimary)
                     .matchedGeometryEffect(id: "wordmark", in: namespace)
             }
             .padding(.horizontal, Space.lg)
-            .padding(.top, Space.md)
+            .padding(.top, Space.sm)
 
             TabView(selection: $page) {
                 ForEach(pages.indices, id: \.self) { i in
@@ -92,14 +148,18 @@ struct WelcomeView: View {
                         onContinue()
                     }
                 } label: {
-                    Text(page < pages.count - 1 ? "Next" : "Continue")
-                        .font(Typo.headline)
-                        .contentTransition(.opacity)
-                        .padding(.horizontal, Space.sm)
+                    HStack(spacing: 6) {
+                        Text(page < pages.count - 1 ? "Next" : "Continue")
+                            .contentTransition(.interpolate)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .font(.system(size: 16, weight: .medium))
+                    .padding(.horizontal, Space.xs)
                 }
                 .glassProminentButton()
                 .controlSize(.large)
-                .animation(.snappy, value: page)
+                .animation(.snappy(duration: 0.25), value: page)
             }
             .padding(.horizontal, Space.lg)
             .padding(.bottom, Space.md)
@@ -114,101 +174,182 @@ private struct WelcomePage: View {
     let text: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.lg) {
-            Spacer(minLength: 0)
-            WelcomeVisual(index: index, isActive: isActive)
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
-            Spacer(minLength: 0)
-            VStack(alignment: .leading, spacing: Space.sm) {
-                Text(title)
-                    .font(.system(size: 34, weight: .bold))
-                    .tracking(-0.8)
-                    .foregroundStyle(Theme.textPrimary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(text)
-                    .font(Typo.body)
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: Space.md)
+            Group {
+                switch index {
+                case 0: PortfolioVisual(active: isActive)
+                case 1: TradeVisual(active: isActive)
+                default: TransferVisual(active: isActive)
+                }
             }
-            .padding(.bottom, Space.xl)
+            .frame(maxWidth: .infinity)
+            .frame(height: 330)
+            Spacer(minLength: Space.md)
+            Text(title)
+                .font(OnboardType.title)
+                .tracking(-0.6)
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+                .staggered(0, active: isActive)
+            Text(text)
+                .font(OnboardType.body)
+                .foregroundStyle(Theme.textSecondary)
+                .lineSpacing(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, Space.sm)
+                .staggered(1, active: isActive)
+                .padding(.bottom, Space.xl)
         }
         .padding(.horizontal, Space.lg)
     }
 }
 
-/// Small animated illustration per page, built from app pieces.
-private struct WelcomeVisual: View {
-    let index: Int
-    let isActive: Bool
+/// Mini Home: balance counting up and a balance chart revealing left to right.
+private struct PortfolioVisual: View {
+    let active: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var drawn: CGFloat = 0
+    @State private var value = SampleData.totalBalance * 0.86
+    @State private var reveal: CGFloat = 0
+    private let points = SampleData.balanceSeries(.month)
 
     var body: some View {
-        Group {
-            switch index {
-            case 0: portfolio
-            case 1: trade
-            default: transfer
+        let lo = points.map(\.price).min() ?? 0, hi = points.map(\.price).max() ?? 1
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text("Total balance")
+                .font(Typo.callout)
+                .foregroundStyle(Theme.textSecondary)
+            Text(value.fiat)
+                .font(.system(size: 34, weight: .medium).monospacedDigit())
+                .tracking(-0.8)
+                .foregroundStyle(Theme.textPrimary)
+                .contentTransition(.numericText(value: value))
+            Chart(points) { p in
+                AreaMark(x: .value("d", p.date), yStart: .value("b", lo), yEnd: .value("v", p.price))
+                    .interpolationMethod(.monotone)
+                    .foregroundStyle(LinearGradient(colors: [Theme.positive.opacity(0.2), Theme.positive.opacity(0)],
+                                                    startPoint: .top, endPoint: .bottom))
+                LineMark(x: .value("d", p.date), y: .value("v", p.price))
+                    .interpolationMethod(.monotone)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+                    .foregroundStyle(Theme.positive)
             }
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartYScale(domain: lo...hi)
+            .frame(height: 130)
+            .mask(alignment: .leading) {
+                Rectangle().scaleEffect(x: reveal, anchor: .leading)
+            }
+            .padding(.top, Space.xs)
+            HStack(spacing: -6) {
+                ForEach(Array(["BTC", "ETH", "SOL", "LINK", "ADA"].enumerated()), id: \.offset) { i, s in
+                    CoinIcon(symbol: s, size: 28)
+                        .overlay(Circle().strokeBorder(Theme.background, lineWidth: 2))
+                        .staggered(2 + i, active: active)
+                }
+            }
+            .padding(.top, Space.sm)
         }
-        .onChange(of: isActive, initial: true) { _, active in
-            guard active else { drawn = 0; return }
-            if reduceMotion { drawn = 1 } else {
-                withAnimation(.easeOut(duration: 1.1).delay(0.15)) { drawn = 1 }
+        .padding(Space.lg)
+        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Theme.hairline, lineWidth: 1))
+        .onChange(of: active, initial: true) { _, isActive in
+            if isActive {
+                if reduceMotion {
+                    value = SampleData.totalBalance; reveal = 1
+                } else {
+                    withAnimation(.easeOut(duration: 1.0).delay(0.15)) { reveal = 1 }
+                    withAnimation(.spring(duration: 0.9, bounce: 0).delay(0.2)) { value = SampleData.totalBalance }
+                }
+            } else {
+                value = SampleData.totalBalance * 0.86; reveal = 0
             }
         }
         .accessibilityHidden(true)
     }
+}
 
-    private var portfolio: some View {
-        VStack(alignment: .leading, spacing: Space.sm) {
-            Text(SampleData.totalBalance.fiat)
-                .font(.system(size: 30, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Theme.textPrimary)
-            Sparkline(values: SampleData.asset("SOL").sparkline)
-                .trim(from: 0, to: drawn)
-                .stroke(Theme.positive, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
-                .frame(height: 90)
-            HStack(spacing: -8) {
-                ForEach(["BTC", "ETH", "SOL", "LINK"], id: \.self) { CoinIcon(symbol: $0, size: 30) }
-            }
-        }
-        .padding(.horizontal, Space.lg)
-    }
+/// A short activity feed of trades sliding in.
+private struct TradeVisual: View {
+    let active: Bool
 
-    private var trade: some View {
-        HStack(spacing: Space.lg) {
-            ForEach(Array(["plus", "arrow.left.arrow.right", "minus"].enumerated()), id: \.offset) { i, symbol in
-                Image(systemName: symbol)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .frame(width: 68, height: 68)
-                    .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 1))
-                    .scaleEffect(i == 1 ? 1.15 : 1)
-                    .opacity(drawn > 0 ? 1 : 0)
-                    .offset(y: drawn > 0 || reduceMotion ? 0 : 12)
-                    .animation(reduceMotion ? nil : .spring(duration: 0.5, bounce: 0).delay(Double(i) * 0.08), value: drawn > 0)
-            }
-        }
-    }
+    private let rows: [(symbol: String, title: String, detail: String, icon: String)] = [
+        ("BTC", "Bought Bitcoin", "0.012 BTC", "plus"),
+        ("ETH", "Sold Ethereum", "0.40 ETH", "minus"),
+        ("SOL", "Swapped to Solana", "12.5 SOL", "arrow.left.arrow.right"),
+    ]
 
-    private var transfer: some View {
-        HStack(spacing: Space.md) {
-            CoinIcon(symbol: "ETH", size: 54)
-            Capsule()
-                .fill(Theme.hairline)
-                .frame(width: 90, height: 2)
-                .overlay(alignment: .leading) {
-                    Circle().fill(Theme.textPrimary).frame(width: 8, height: 8)
-                        .offset(x: 82 * drawn)
+    var body: some View {
+        VStack(spacing: Space.sm) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { i, row in
+                HStack(spacing: Space.sm) {
+                    CoinIcon(symbol: row.symbol, size: 38)
+                        .overlay(alignment: .bottomTrailing) {
+                            Image(systemName: row.icon)
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(Theme.background)
+                                .frame(width: 16, height: 16)
+                                .background(Theme.textPrimary, in: .circle)
+                                .overlay(Circle().strokeBorder(Theme.background, lineWidth: 1.5))
+                                .offset(x: 3, y: 3)
+                        }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(row.title).font(.system(size: 16, weight: .medium)).foregroundStyle(Theme.textPrimary)
+                        Text(row.detail).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+                    }
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 18))
+                        .foregroundStyle(Theme.positive)
+                        .symbolEffect(.bounce, value: active)
                 }
-            Image(systemName: "qrcode")
-                .font(.system(size: 34, weight: .regular))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: 64, height: 64)
-                .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Theme.hairline, lineWidth: 1))
+                .padding(Space.md)
+                .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Theme.hairline, lineWidth: 1))
+                .staggered(i * 2, active: active)
+            }
         }
+        .padding(.horizontal, Space.xs)
+        .accessibilityHidden(true)
+    }
+}
+
+/// A QR tile and a transfer that lands.
+private struct TransferVisual: View {
+    let active: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var sent = false
+
+    var body: some View {
+        VStack(spacing: Space.lg) {
+            Image(systemName: "qrcode")
+                .font(.system(size: 110, weight: .ultraLight))
+                .foregroundStyle(Theme.textPrimary)
+                .frame(width: 180, height: 180)
+                .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Theme.hairline, lineWidth: 1))
+                .overlay { UpdraftMark(size: 34) }
+                .staggered(0, active: active)
+            HStack(spacing: Space.xs) {
+                Image(systemName: sent ? "checkmark.circle.fill" : "paperplane")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(sent ? Theme.positive : Theme.textPrimary)
+                    .contentTransition(.symbolEffect(.replace))
+                Text(sent ? "0.25 ETH received" : "Sending 0.25 ETH")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                    .contentTransition(.interpolate)
+            }
+            .padding(.horizontal, Space.md)
+            .padding(.vertical, Space.sm)
+            .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+            .staggered(1, active: active)
+        }
+        .onChange(of: active, initial: true) { _, isActive in
+            sent = false
+            guard isActive else { return }
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.4, bounce: 0).delay(1.1)) { sent = true }
+        }
+        .sensoryFeedback(.success, trigger: sent) { _, new in new }
+        .accessibilityHidden(true)
     }
 }
 
@@ -221,8 +362,8 @@ struct PageDots: View {
         HStack(spacing: 6) {
             ForEach(0..<count, id: \.self) { i in
                 Capsule()
-                    .fill(i == current ? Theme.textPrimary : Theme.textTertiary.opacity(0.5))
-                    .frame(width: i == current ? 22 : 7, height: 7)
+                    .fill(i == current ? Theme.textPrimary : Theme.textTertiary.opacity(0.45))
+                    .frame(width: i == current ? 20 : 6, height: 6)
             }
         }
         .animation(.spring(duration: 0.35, bounce: 0), value: current)
@@ -231,7 +372,8 @@ struct PageDots: View {
     }
 }
 
-/// Entry point: create a profile or sign in.
+// MARK: - Get started
+
 struct GetStartedView: View {
     let namespace: Namespace.ID
     let onStart: () -> Void
@@ -240,25 +382,28 @@ struct GetStartedView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
-            UpdraftMark(size: 72)
+            UpdraftMark(size: 64)
                 .matchedGeometryEffect(id: "mark", in: namespace)
                 .padding(.bottom, Space.lg)
-            Text("Invest with\na lighter touch.")
-                .font(.system(size: 40, weight: .bold))
-                .tracking(-1)
+            Text("Invest with a\nlighter touch.")
+                .font(OnboardType.display)
+                .tracking(-0.8)
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Set up takes about a minute. We'll tailor Updraft to how you invest.")
-                .font(Typo.body)
+                .staggered(0)
+            Text("Setup takes about a minute. We'll tailor Updraft to how you invest.")
+                .font(OnboardType.body)
                 .foregroundStyle(Theme.textSecondary)
+                .lineSpacing(2)
                 .padding(.top, Space.sm)
+                .staggered(1)
             Spacer()
-            VStack(spacing: Space.sm) {
+            VStack(spacing: Space.xs) {
                 Button {
                     Haptics.tap()
                     onStart()
                 } label: {
-                    Text("Get started").font(Typo.headline).frame(maxWidth: .infinity)
+                    Text("Get started").font(.system(size: 17, weight: .medium)).frame(maxWidth: .infinity)
                 }
                 .glassProminentButton()
                 .controlSize(.large)
@@ -266,12 +411,13 @@ struct GetStartedView: View {
                     Haptics.tap()
                     onSignIn()
                 }
-                .font(Typo.callout.weight(.medium))
-                .foregroundStyle(Theme.textPrimary)
-                .padding(.vertical, Space.xs)
+                .font(.system(size: 15, weight: .regular))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.vertical, Space.sm)
             }
+            .staggered(2)
         }
         .padding(.horizontal, Space.lg)
-        .padding(.bottom, Space.md)
+        .padding(.bottom, Space.xs)
     }
 }
