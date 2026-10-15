@@ -114,6 +114,13 @@ struct CoinDetailSheet: View {
         let pad = (hi - lo) * 0.08
         return Chart {
             ForEach(points) { point in
+                // Same soft fill as the Home balance chart, in the timeframe's color.
+                AreaMark(x: .value("Date", point.date),
+                         yStart: .value("Base", lo - pad),
+                         yEnd: .value("Price", point.price))
+                    .interpolationMethod(.monotone)
+                    .foregroundStyle(LinearGradient(colors: [tint.opacity(0.22), tint.opacity(0)],
+                                                    startPoint: .top, endPoint: .bottom))
                 LineMark(x: .value("Date", point.date), y: .value("Price", point.price))
                     .interpolationMethod(.monotone)
                     .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
