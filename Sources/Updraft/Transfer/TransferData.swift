@@ -87,6 +87,7 @@ struct AssetPickerRow: View {
                     Text(showBalance ? "Balance \(holding.amount.units) \(holding.asset.symbol)" : holding.asset.symbol)
                         .font(Typo.figure).foregroundStyle(Theme.textSecondary)
                         .contentTransition(.numericText())
+                        .privateAmount()
                 }
                 Spacer()
                 Image(systemName: "chevron.down")
@@ -157,8 +158,8 @@ struct CoinSelectorList: View {
             Spacer()
             if h.amount > 0 {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(h.value.fiat).font(Typo.figure).foregroundStyle(Theme.textPrimary)
-                    Text("\(h.amount.units) \(h.asset.symbol)").font(Typo.caption).foregroundStyle(Theme.textSecondary)
+                    Text(h.value.fiat).font(Typo.figure).foregroundStyle(Theme.textPrimary).privateAmount()
+                    Text("\(h.amount.units) \(h.asset.symbol)").font(Typo.caption).foregroundStyle(Theme.textSecondary).privateAmount()
                 }
             }
             Image(systemName: "checkmark")

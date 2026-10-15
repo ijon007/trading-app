@@ -120,3 +120,21 @@ private final class FlipMonitor {
         }
     }
 }
+
+/// Small eye toggle shown next to the Home balance label.
+struct PrivacyEyeButton: View {
+    @AppStorage(PrivacyMode.storageKey) private var hidden = false
+
+    var body: some View {
+        Button { PrivacyMode.toggle() } label: {
+            Image(systemName: hidden ? "eye.slash" : "eye")
+                .font(Typo.callout)
+                .foregroundStyle(Theme.textSecondary)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(hidden ? "Show amounts" : "Hide amounts")
+    }
+}

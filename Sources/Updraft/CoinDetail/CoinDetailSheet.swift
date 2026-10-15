@@ -153,16 +153,18 @@ struct CoinDetailSheet: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: Space.xxs) {
                     Text(p.value.fiat)
+                        .privateAmount()
                         .font(.system(size: 28, weight: .semibold).monospacedDigit())
                         .tracking(-0.6)
                         .foregroundStyle(Theme.textPrimary)
                         .contentTransition(.numericText())
                     Text("\(p.amount.formatted(.number.precision(.fractionLength(0...5)))) \(asset.symbol)")
-                        .font(Typo.figure).foregroundStyle(Theme.textSecondary)
+                        .font(Typo.figure).foregroundStyle(Theme.textSecondary).privateAmount()
                 }
                 Spacer(minLength: Space.sm)
                 VStack(alignment: .trailing, spacing: Space.xxs) {
                     Text(signed(p.totalReturn))
+                        .privateAmount()
                         .font(.system(size: 28, weight: .semibold).monospacedDigit())
                         .tracking(-0.6)
                         .foregroundStyle(tint)
@@ -200,7 +202,7 @@ struct CoinDetailSheet: View {
         HStack {
             Text(title).font(Typo.callout).foregroundStyle(Theme.textSecondary)
             Spacer()
-            Text(value).font(Typo.figure).foregroundStyle(tint).contentTransition(.numericText())
+            Text(value).font(Typo.figure).foregroundStyle(tint).contentTransition(.numericText()).privateAmount()
         }
     }
 

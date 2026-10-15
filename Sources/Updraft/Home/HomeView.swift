@@ -43,6 +43,7 @@ struct HomeView: View {
                 }
             }
             .listStyle(.plain)
+            .privacyPullToggle()
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
             .sensoryFeedback(.selection, trigger: accountID)
@@ -94,11 +95,11 @@ struct HoldingRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(holding.asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                 Text("\(holding.amount.formatted(.number.precision(.fractionLength(0...4)))) \(holding.asset.symbol)")
-                    .font(Typo.figure).foregroundStyle(Theme.textSecondary)
+                    .font(Typo.figure).foregroundStyle(Theme.textSecondary).privateAmount()
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
-                Text(holding.value.fiat).font(Typo.figure).foregroundStyle(Theme.textPrimary)
+                Text(holding.value.fiat).font(Typo.figure).foregroundStyle(Theme.textPrimary).privateAmount()
                 ChangeText(value: holding.asset.change24h)
             }
         }

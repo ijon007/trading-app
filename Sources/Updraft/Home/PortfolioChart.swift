@@ -55,17 +55,21 @@ private struct BalanceSummary: View {
         let delta = value - start
         let percent = start > 0 ? delta / start * 100 : 0
         VStack(spacing: Space.xs) {
-            Text("Total balance")
-                .font(Typo.callout)
-                .foregroundStyle(Theme.textSecondary)
-                // Debug: long-press to replay onboarding.
-                .contextMenu {
-                    Button("Replay onboarding", systemImage: "arrow.counterclockwise") { OnboardingAnswers.reset() }
-                }
+            HStack(spacing: Space.xxs) {
+                Text("Total balance")
+                    .font(Typo.callout)
+                    .foregroundStyle(Theme.textSecondary)
+                    // Debug: long-press to replay onboarding.
+                    .contextMenu {
+                        Button("Replay onboarding", systemImage: "arrow.counterclockwise") { OnboardingAnswers.reset() }
+                    }
+                PrivacyEyeButton()
+            }
             Text(value.fiat)
                 .heroNumeral()
                 .foregroundStyle(Theme.textPrimary)
                 .contentTransition(.numericText(value: value))
+                .privateAmount()
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
                 .padding(.horizontal, Space.md)
@@ -74,6 +78,7 @@ private struct BalanceSummary: View {
                     .font(.system(size: 9))
                 Text((delta >= 0 ? "+" : "−") + abs(delta).fiat)
                     .contentTransition(.numericText(value: delta))
+                    .privateAmount()
                 Text("(\(percent.percent))")
                     .contentTransition(.numericText(value: percent))
                 Group {
