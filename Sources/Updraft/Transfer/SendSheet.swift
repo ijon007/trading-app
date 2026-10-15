@@ -62,7 +62,7 @@ struct SendSheet: View {
                 .padding(.vertical, Space.md)
             }
             .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Send")
             .navigationBarTitleDisplayMode(.inline)

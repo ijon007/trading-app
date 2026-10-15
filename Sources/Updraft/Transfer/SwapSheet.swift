@@ -50,7 +50,7 @@ struct SwapSheet: View {
                 .padding(.vertical, Space.md)
             }
             .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Swap")
             .navigationBarTitleDisplayMode(.inline)
