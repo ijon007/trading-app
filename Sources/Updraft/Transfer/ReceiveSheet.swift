@@ -126,7 +126,7 @@ struct ReceiveSheet: View {
 }
 
 /// Crisp QR code rendered with Core Image.
-private struct QRCodeImage: View {
+struct QRCodeImage: View {
     let text: String
 
     var body: some View {

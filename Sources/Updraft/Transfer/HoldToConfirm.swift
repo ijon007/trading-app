@@ -34,6 +34,13 @@ struct HoldToConfirm: View {
             completed = true
             Haptics.medium()
             onConfirm()
+            // Ready again if the screen stays (e.g. a failed check).
+            Task {
+                try? await Task.sleep(for: .seconds(1))
+                completed = false
+                pressing = false
+                withAnimation(.smooth(duration: 0.3)) { progress = 0 }
+            }
         } onPressingChanged: { down in
             guard !completed else { return }
             pressing = down

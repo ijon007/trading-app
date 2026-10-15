@@ -111,41 +111,7 @@ struct CreateWalletFlow: View {
                 Text("Write these words down in order and keep them offline.")
                     .font(Typo.callout).foregroundStyle(Theme.textSecondary)
 
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: Space.xs), GridItem(.flexible())], spacing: Space.xs) {
-                    ForEach(Array(phrase.enumerated()), id: \.offset) { i, word in
-                        HStack(spacing: Space.xs) {
-                            Text("\(i + 1)").font(Typo.caption).monospacedDigit()
-                                .foregroundStyle(Theme.textTertiary).frame(width: 20, alignment: .trailing)
-                            Text(word).font(.system(size: 16, weight: .medium, design: .monospaced))
-                                .foregroundStyle(Theme.textPrimary)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, Space.sm)
-                        .padding(.vertical, Space.sm)
-                        .background(Theme.surface, in: .rect(cornerRadius: Radius.sm))
-                        .overlay(RoundedRectangle(cornerRadius: Radius.sm).strokeBorder(Theme.hairline))
-                    }
-                }
-                .blur(radius: revealed ? 0 : 10)
-                .overlay {
-                    if !revealed {
-                        VStack(spacing: Space.xs) {
-                            Image(systemName: "eye.slash").font(.system(size: 22, weight: .medium))
-                            Text("Tap to reveal").font(Typo.headline)
-                            Text("Make sure no one can see your screen.").font(Typo.caption)
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                        .foregroundStyle(Theme.textPrimary)
-                        .transition(.opacity)
-                    }
-                }
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    Haptics.select()
-                    withAnimation(.smooth(duration: 0.3)) { revealed.toggle() }
-                }
-                .privacySensitive()
-                .accessibilityLabel(revealed ? phrase.joined(separator: " ") : "Hidden recovery phrase. Double tap to reveal.")
+                PhraseGrid(words: phrase, revealed: $revealed)
 
                 HStack {
                     Button {
@@ -270,6 +236,7 @@ struct CreateWalletFlow: View {
         let created = Account(id: UUID().uuidString, name: name, symbol: symbol, holdings: [],
                               address: Wallet.service.address(forPhrase: phrase))
         account = created
+        Wallet.service.storePhrase(phrase, for: created.id)
         Haptics.success()
         step = .done
     }
