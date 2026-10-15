@@ -62,10 +62,50 @@ final class MarketStore: @unchecked Sendable {
     /// Symbols that have received a socket tick (their price comes from Coinbase).
     @ObservationIgnored private var streamed: Set<String> = []
 
-    /// Coins streamed over the socket (the original set; widened later).
-    private static let streamedSymbols = ["BTC", "ETH", "SOL", "XRP", "ADA", "AVAX", "LINK", "DOT"]
+    /// Always streamed, even before the catalog arrives.
+    private static let coreSymbols = ["BTC", "ETH", "SOL", "XRP", "ADA", "AVAX", "LINK", "DOT"]
+    /// How many top coins (by market cap, Coinbase-listed) to stream besides held ones.
+    private static let streamLimit = 40
 
-    private static var symbols: [String] { streamedSymbols }
+    /// Base currencies with an online USD product on Coinbase Exchange.
+    @ObservationIgnored private var listed: Set<String> = []
+    @ObservationIgnored private var subscribed: [String] = []
+
+    /// Held coins plus the top listed coins: a bounded set so the socket stays light.
+    @MainActor private func streamSymbols() -> [String] {
+        let held = Set(Account.all.flatMap { $0.holdings.map(\.asset.id) })
+        guard !listed.isEmpty else { return Array(Set(Self.coreSymbols).union(held)).sorted() }
+        let top = catalog.map(\.symbol).filter { listed.contains($0) }.prefix(Self.streamLimit)
+        return Array(Set(top).union(held.filter { listed.contains($0) }).union(Self.coreSymbols.filter { listed.contains($0) })).sorted()
+    }
+
+    /// Whether a coin trades on Coinbase (unknown until products load).
+    func isListed(_ symbol: String) -> Bool? { listed.isEmpty ? nil : listed.contains(symbol) }
+
+    private struct Product: Decodable {
+        let base_currency: String
+        let quote_currency: String
+        let status: String?
+        let trading_disabled: Bool?
+    }
+
+    @MainActor private func loadListedProducts() async {
+        guard listed.isEmpty, let url = URL(string: "https://api.exchange.coinbase.com/products") else { return }
+        var request = URLRequest(url: url)
+        request.setValue("Updraft/1.0", forHTTPHeaderField: "User-Agent")
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let products = try? JSONDecoder().decode([Product].self, from: data) else { return }
+        listed = Set(products.filter { $0.quote_currency == "USD" && $0.status != "delisted" && $0.trading_disabled != true }
+            .map { $0.base_currency.uppercased() })
+    }
+
+    /// Reconnects when the set of coins worth streaming changed.
+    @MainActor private func resubscribeIfNeeded() {
+        guard active, streamSymbols() != subscribed else { return }
+        socketTask?.cancel()
+        socketTask = Task { await runSocket() }
+    }
 
     // MARK: Lifecycle
 
@@ -73,7 +113,11 @@ final class MarketStore: @unchecked Sendable {
     @MainActor func start() {
         guard !active else { return }
         active = true
-        Task { await loadGeckoIfStale() }
+        Task {
+            await loadListedProducts()
+            await loadGeckoIfStale()
+            resubscribeIfNeeded()
+        }
         socketTask = Task { await runSocket() }
         flushTask = Task {
             var tick = 0
@@ -135,9 +179,11 @@ final class MarketStore: @unchecked Sendable {
         let socket = URLSession.shared.webSocketTask(with: URL(string: "wss://ws-feed.exchange.coinbase.com")!)
         socket.resume()
         try await withTaskCancellationHandler {
+            let symbols = streamSymbols()
+            subscribed = symbols
             let subscribe: [String: Any] = [
                 "type": "subscribe",
-                "product_ids": Self.symbols.map { "\($0)-USD" },
+                "product_ids": symbols.map { "\($0)-USD" },
                 "channels": ["ticker"],
             ]
             let data = try JSONSerialization.data(withJSONObject: subscribe)
@@ -219,6 +265,7 @@ final class MarketStore: @unchecked Sendable {
         }
         catalog = list
         quotes = next
+        resubscribeIfNeeded()
         if !hasLoaded && !next.isEmpty { hasLoaded = true }
     }
 
@@ -257,7 +304,12 @@ final class MarketStore: @unchecked Sendable {
         Task {
             defer { inflight.remove(key) }
             do {
-                let points = try await Self.fetchCandles(product: "\(symbol)-USD", timeframe: timeframe)
+                let points: [PricePoint]
+                if isListed(symbol) == false, let id = catalogCoin(symbol)?.geckoID {
+                    points = try await Self.fetchGeckoChart(id: id, timeframe: timeframe)
+                } else {
+                    points = try await Self.fetchCandles(product: "\(symbol)-USD", timeframe: timeframe)
+                }
                 guard !points.isEmpty else { throw URLError(.zeroByteResource) }
                 candleStore[key] = points
                 candleLoadedAt[key] = .now
@@ -281,6 +333,33 @@ final class MarketStore: @unchecked Sendable {
         case .year: (86_400, 365 * 86_400)
         case .all: (86_400, 4 * 365 * 86_400)
         }
+    }
+
+    private struct GeckoChart: Decodable { let prices: [[Double]] }
+
+    /// History for coins Coinbase doesn't list, from CoinGecko market_chart.
+    nonisolated static func fetchGeckoChart(id: String, timeframe: Timeframe) async throws -> [PricePoint] {
+        let days: String = switch timeframe {
+        case .hour, .day: "1"
+        case .week: "7"
+        case .month: "30"
+        case .year: "365"
+        case .all: "max"
+        }
+        guard let url = URL(string: "https://api.coingecko.com/api/v3/coins/\(id)/market_chart?vs_currency=usd&days=\(days)") else {
+            throw URLError(.badURL)
+        }
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+        var points = try JSONDecoder().decode(GeckoChart.self, from: data).prices.compactMap { p -> PricePoint? in
+            guard p.count >= 2 else { return nil }
+            return PricePoint(date: Date(timeIntervalSince1970: p[0] / 1000), price: p[1])
+        }
+        if timeframe == .hour {
+            let cutoff = Date.now.addingTimeInterval(-3_600)
+            points = points.filter { $0.date >= cutoff }
+        }
+        return points
     }
 
     nonisolated static func fetchCandles(product: String, timeframe: Timeframe) async throws -> [PricePoint] {
