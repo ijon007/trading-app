@@ -7,7 +7,7 @@ struct HomeView: View {
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
     /// Selected account; Home redraws (animated) when it changes.
     @AppStorage(Account.storageKey) private var accountID = Account.all[0].id
-    private var holdings: [Holding] { Account.all.first { $0.id == accountID }?.holdings ?? SampleData.holdings }
+    private var holdings: [Holding] { Account.all.first { $0.id == accountID }?.liveHoldings ?? SampleData.holdings }
     private let actions: [(title: String, icon: String)] = [
         ("Swap", "arrow.left.arrow.right"), ("Send", "arrow.up"), ("Receive", "arrow.down"),
     ]

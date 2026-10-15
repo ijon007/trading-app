@@ -17,7 +17,8 @@ struct Holding: Identifiable, Hashable, Sendable {
 }
 
 enum SampleData {
-    static let assets: [Asset] = [
+    /// Listed coins with sample prices; live quotes override them in `assets`.
+    static let baseAssets: [Asset] = [
         Asset(id: "BTC", name: "Bitcoin", price: 112_480.20, change24h: 1.84, marketCap: 2_230_000_000_000),
         Asset(id: "ETH", name: "Ethereum", price: 4_312.55, change24h: -0.92, marketCap: 520_000_000_000),
         Asset(id: "SOL", name: "Solana", price: 218.40, change24h: 4.31, marketCap: 104_000_000_000),
@@ -28,10 +29,20 @@ enum SampleData {
         Asset(id: "DOT", name: "Polkadot", price: 4.62, change24h: 2.71, marketCap: 7_000_000_000),
     ]
 
-    static func asset(_ s: String) -> Asset { assets.first { $0.id == s }! }
+    /// Coins at live prices (Coinbase/CoinGecko) when available, sample otherwise.
+    /// Reading this inside a view body subscribes it to price updates.
+    static var assets: [Asset] {
+        let quotes = MarketStore.shared.quotes
+        return baseAssets.map { a in
+            guard let q = quotes[a.id] else { return a }
+            return Asset(id: a.id, name: a.name, price: q.price, change24h: q.change24h, marketCap: q.marketCap ?? a.marketCap)
+        }
+    }
+
+    static func asset(_ s: String) -> Asset { assets.first { $0.id == s } ?? baseAssets.first { $0.id == s }! }
 
     /// Holdings of the selected account; everything else derives from this.
-    static var holdings: [Holding] { Account.current.holdings }
+    static var holdings: [Holding] { Account.current.liveHoldings }
 
     static var totalBalance: Double { holdings.reduce(0) { $0 + $1.value } }
     static var totalChange24h: Double {

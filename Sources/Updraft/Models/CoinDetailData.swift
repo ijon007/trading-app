@@ -57,6 +57,15 @@ extension Asset {
     /// Percent change over a timeframe; 1D matches `change24h`, 1H is a small move.
     func change(over timeframe: Timeframe) -> Double {
         guard timeframe != .day else { return change24h }
+        if let points = MarketStore.shared.candles(for: symbol, timeframe), let first = points.first?.price, first > 0 {
+            return (price - first) / first * 100
+        }
+        return sampleChange(over: timeframe)
+    }
+
+    /// Seeded sample change, used when real history isn't available.
+    private func sampleChange(over timeframe: Timeframe) -> Double {
+        guard timeframe != .day else { return change24h }
         var rng = SeededRandom(symbol + timeframe.rawValue + "chg")
         let scale: Double = switch timeframe {
         case .hour: 1.6
@@ -72,7 +81,19 @@ extension Asset {
     /// Price series for a timeframe, generated once and cached for a minute,
     /// so charts can read it on every render (and every scrub tick) for free.
     func series(_ timeframe: Timeframe) -> [PricePoint] {
-        SeriesCache.shared.value(for: "\(symbol)|\(timeframe.rawValue)") { makeSeries(timeframe) }
+        let market = MarketStore.shared
+        if var points = market.candles(for: symbol, timeframe), let last = points.last {
+            if market.candlesStale(symbol, timeframe) { market.requestCandles(symbol, timeframe) }
+            // The newest point follows the live price.
+            points[points.count - 1] = PricePoint(date: last.date, price: price)
+            return points
+        }
+        if market.candlesUnavailable(symbol, timeframe) {
+            market.requestCandles(symbol, timeframe)
+            return SeriesCache.shared.value(for: "\(symbol)|\(timeframe.rawValue)|\(Int(price))") { makeSeries(timeframe) }
+        }
+        market.requestCandles(symbol, timeframe)
+        return [] // loading
     }
 
     /// Deterministic random walk ending at the current price.
@@ -81,7 +102,7 @@ extension Asset {
         let n = timeframe.pointCount
         var walk = [0.0]
         for _ in 1..<n { walk.append(walk[walk.count - 1] + (rng.next() - 0.5)) }
-        let startPrice = price / (1 + change(over: timeframe) / 100)
+        let startPrice = price / (1 + sampleChange(over: timeframe) / 100)
         let first = walk[0], last = walk[n - 1]
         let lo = walk.min() ?? 0, hi = walk.max() ?? 1
         let wiggle = abs(price - startPrice) * 0.6 + price * 0.01

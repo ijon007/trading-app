@@ -14,6 +14,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: hasOnboarded)
+        .task { MarketStore.shared.start() }
     }
 
     private var tabs: some View {

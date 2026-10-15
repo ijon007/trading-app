@@ -8,7 +8,10 @@ struct Account: Identifiable, Hashable, Sendable {
     let symbol: String
     let holdings: [Holding]
 
-    var totalBalance: Double { holdings.reduce(0) { $0 + $1.value } }
+    /// Sample amounts valued at live prices.
+    var liveHoldings: [Holding] { holdings.map { Holding(asset: SampleData.asset($0.asset.id), amount: $0.amount) } }
+
+    var totalBalance: Double { liveHoldings.reduce(0) { $0 + $1.value } }
 }
 
 extension Account {
