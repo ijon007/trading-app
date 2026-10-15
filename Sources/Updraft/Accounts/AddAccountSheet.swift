@@ -240,6 +240,7 @@ struct AddAccountSheet: View {
         if mode == .create { creating = true; return }
         let account = Account(id: UUID().uuidString, name: trimmedName, symbol: symbol, holdings: [],
                               address: ImportWalletFields.address(secret, usesKey: usesKey))
+        if !usesKey { Wallet.service.storePhrase(ImportWalletFields.words(secret), for: account.id) }
         Haptics.success()
         onAdd(account)
         dismiss()

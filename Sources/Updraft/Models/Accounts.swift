@@ -7,14 +7,18 @@ struct Account: Identifiable, Hashable, Sendable {
     enum Kind: String, Codable, Sendable { case owned, watch }
 
     let id: String
-    let name: String
+    var name: String
     /// SF Symbol used for the account's avatar.
-    let symbol: String
+    var symbol: String
     var holdings: [Holding]
     /// Watch-only accounts track a real address and can't send or swap.
     var isWatchOnly: Bool = false
     /// Ethereum address for watch accounts.
     var address: String? = nil
+    /// Avatar color key (see `AccountPalette`); nil keeps the monochrome look.
+    var color: String? = nil
+    /// Emoji avatar; replaces the symbol when set.
+    var emoji: String? = nil
 
     var kind: Kind { isWatchOnly ? .watch : .owned }
     var isWatch: Bool { isWatchOnly }
@@ -35,15 +39,19 @@ final class AccountStore: @unchecked Sendable {
         didSet { save() }
     }
 
-    private static let fileKey = "accounts.saved.v1"
+    /// v1 held only created accounts; v2 holds the whole ordered list (renamed,
+    /// reordered and removed samples included).
+    private static let legacyKey = "accounts.saved.v1"
+    private static let fileKey = "accounts.saved.v2"
 
     private init() {
-        accounts = Account.samples + Self.load()
+        accounts = Self.load() ?? (Account.samples + (Self.load(key: Self.legacyKey) ?? []))
+        if accounts.isEmpty { accounts = Account.samples }
         // Reopen on the last selected account once saved ones are loaded;
-        // a stale id (e.g. a removed account) falls back to the first.
+        // a stale id (e.g. a removed account) falls back to the default.
         let key = Account.storageKey
         if let id = UserDefaults.standard.string(forKey: key), !accounts.contains(where: { $0.id == id }) {
-            UserDefaults.standard.set(accounts[0].id, forKey: key)
+            UserDefaults.standard.set(Account.defaultID(in: accounts), forKey: key)
         }
     }
 
@@ -57,26 +65,28 @@ final class AccountStore: @unchecked Sendable {
         let kind: Account.Kind
         let address: String?
         let holdings: [Amount]
+        var color: String?
+        var emoji: String?
     }
 
     private func save() {
-        let sampleIDs = Set(Account.samples.map(\.id))
-        let stored = accounts.filter { !sampleIDs.contains($0.id) }.map { a in
+        let stored = accounts.map { a in
             Stored(id: a.id, name: a.name, symbol: a.symbol, kind: a.kind, address: a.address,
-                   holdings: a.holdings.map { .init(symbol: $0.asset.id, amount: $0.amount) })
+                   holdings: a.holdings.map { .init(symbol: $0.asset.id, amount: $0.amount) },
+                   color: a.color, emoji: a.emoji)
         }
         if let data = try? JSONEncoder().encode(stored) {
             UserDefaults.standard.set(data, forKey: Self.fileKey)
         }
     }
 
-    private static func load() -> [Account] {
-        guard let data = UserDefaults.standard.data(forKey: fileKey),
-              let stored = try? JSONDecoder().decode([Stored].self, from: data) else { return [] }
+    private static func load(key: String = fileKey) -> [Account]? {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let stored = try? JSONDecoder().decode([Stored].self, from: data) else { return nil }
         return stored.map { s in
             Account(id: s.id, name: s.name, symbol: s.symbol,
                     holdings: s.holdings.map { Holding(asset: SampleData.asset($0.symbol), amount: $0.amount) },
-                    isWatchOnly: s.kind == .watch, address: s.address)
+                    isWatchOnly: s.kind == .watch, address: s.address, color: s.color, emoji: s.emoji)
         }
     }
 }
@@ -113,10 +123,75 @@ extension Account {
         ]),
     ]
 
-    /// The account the app is showing, falling back to Main.
+    /// The account the app is showing, falling back to the default.
     static var current: Account {
         let id = UserDefaults.standard.string(forKey: storageKey)
-        return all.first { $0.id == id } ?? all[0]
+        return all.first { $0.id == id } ?? all.first { $0.id == defaultID } ?? all[0]
+    }
+
+    // MARK: Management
+
+    /// UserDefaults key for the default account (used when the last one is gone).
+    static let defaultKey = "account.default"
+
+    static func defaultID(in list: [Account]) -> String {
+        let id = UserDefaults.standard.string(forKey: defaultKey)
+        return list.first { $0.id == id }?.id ?? list[0].id
+    }
+
+    static var defaultID: String { defaultID(in: all) }
+    var isDefault: Bool { id == Account.defaultID }
+
+    static func setDefault(_ id: String) { UserDefaults.standard.set(id, forKey: defaultKey) }
+
+    /// Replaces an account's editable fields (name, avatar).
+    static func update(_ account: Account) {
+        guard let i = all.firstIndex(where: { $0.id == account.id }) else { return }
+        all[i] = account
+    }
+
+    static func move(fromOffsets: IndexSet, toOffset: Int) {
+        var list = all
+        list.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        all = list
+    }
+
+    /// Removes an account. The last one can't go. If it was selected, the app
+    /// switches to the default; if it was the default, the first becomes default.
+    @discardableResult
+    static func remove(_ id: String) -> Bool {
+        guard all.count > 1, let i = all.firstIndex(where: { $0.id == id }) else { return false }
+        let wasDefault = all[i].isDefault
+        all.remove(at: i)
+        Wallet.service.deletePhrase(for: id)
+        if wasDefault { setDefault(all[0].id) }
+        if UserDefaults.standard.string(forKey: storageKey) == id {
+            UserDefaults.standard.set(defaultID, forKey: storageKey)
+        }
+        return true
+    }
+
+    /// Moves an amount of one coin between two of my accounts (sample balances).
+    /// Watch-only accounts can't be the source.
+    @discardableResult
+    static func transfer(from: String, to: String, symbol: String, amount: Double) -> Bool {
+        guard from != to, amount > 0,
+              let f = all.firstIndex(where: { $0.id == from }), !all[f].isWatchOnly,
+              let t = all.firstIndex(where: { $0.id == to }),
+              let h = all[f].holdings.firstIndex(where: { $0.asset.id == symbol }),
+              all[f].holdings[h].amount + 1e-12 >= amount else { return false }
+        var list = all
+        let left = list[f].holdings[h].amount - amount
+        if left < 1e-9 { list[f].holdings.remove(at: h) } else {
+            list[f].holdings[h] = Holding(asset: list[f].holdings[h].asset, amount: left)
+        }
+        if let j = list[t].holdings.firstIndex(where: { $0.asset.id == symbol }) {
+            list[t].holdings[j] = Holding(asset: list[t].holdings[j].asset, amount: list[t].holdings[j].amount + amount)
+        } else {
+            list[t].holdings.append(Holding(asset: SampleData.asset(symbol), amount: amount))
+        }
+        all = list
+        return true
     }
 
     // MARK: Watch accounts

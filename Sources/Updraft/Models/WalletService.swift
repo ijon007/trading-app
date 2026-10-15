@@ -12,6 +12,10 @@ protocol WalletService: Sendable {
     /// The Ethereum address for a phrase or private key.
     func address(forPhrase words: [String]) -> String
     func address(forPrivateKey key: String) -> String
+    /// Recovery phrase storage per account (a real version uses the Keychain).
+    func storePhrase(_ words: [String], for accountID: String)
+    func phrase(for accountID: String) -> [String]?
+    func deletePhrase(for accountID: String)
 }
 
 extension WalletService {
@@ -45,6 +49,12 @@ struct MockWalletService: WalletService {
 
     func address(forPhrase words: [String]) -> String { Self.fakeAddress(words.joined(separator: " ").lowercased()) }
     func address(forPrivateKey key: String) -> String { Self.fakeAddress(key.lowercased()) }
+
+    // Mock storage in UserDefaults. Never do this with real keys.
+    private func key(_ id: String) -> String { "wallet.mock.phrase.\(id)" }
+    func storePhrase(_ words: [String], for accountID: String) { UserDefaults.standard.set(words, forKey: key(accountID)) }
+    func phrase(for accountID: String) -> [String]? { UserDefaults.standard.stringArray(forKey: key(accountID)) }
+    func deletePhrase(for accountID: String) { UserDefaults.standard.removeObject(forKey: key(accountID)) }
 
     /// 0x + 40 hex from a stable FNV-1a stream over the input.
     private static func fakeAddress(_ seed: String) -> String {
