@@ -49,11 +49,11 @@ extension Double {
 }
 
 extension View {
-    /// Quiet surface card used inside transfer drawers (glass is kept for controls).
+    /// Group inside transfer drawers: no fill, so it sits on the sheet's own
+    /// material in light and dark, outlined by a hairline (glass is kept for controls).
     func transferCard() -> some View {
         padding(Space.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Theme.surface, in: .rect(cornerRadius: Radius.lg))
             .overlay(RoundedRectangle(cornerRadius: Radius.lg).strokeBorder(Theme.hairline, lineWidth: 1))
     }
 }

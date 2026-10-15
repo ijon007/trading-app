@@ -114,7 +114,7 @@ struct ReceiveSheet: View {
         }
         .padding(Space.md)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Theme.surfaceHi, in: .rect(cornerRadius: Radius.md))
+        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Theme.hairline, lineWidth: 1))
     }
 }
 
