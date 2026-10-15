@@ -60,6 +60,9 @@ struct ExploreView: View {
                 }
             }
             .listStyle(.plain)
+            .marketLoading(!MarketStore.shared.hasLoaded)
+            .safeAreaInset(edge: .bottom) { MarketStatusBanner() }
+            .animation(.easeOut(duration: 0.25), value: MarketStore.shared.status)
             .environment(\.defaultMinListRowHeight, 0)
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)

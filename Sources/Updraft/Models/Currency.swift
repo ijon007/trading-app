@@ -38,9 +38,15 @@ enum Currency: String, CaseIterable, Identifiable, Sendable {
     /// Formats a USD amount in this currency with its symbol placed correctly.
     func format(_ usd: Double, compact: Bool = false) -> String {
         let value = usd * rate
-        let number = compact
-            ? value.formatted(.number.notation(.compactName).precision(.fractionLength(0...2)))
-            : value.formatted(.number.precision(.fractionLength(fractionDigits)))
+        let number: String
+        if compact {
+            number = value.formatted(.number.notation(.compactName).precision(.fractionLength(0...2)))
+        } else if value != 0, abs(value) < 1 {
+            // Small and meme-coin prices: keep four significant digits (0.00001234).
+            number = value.formatted(.number.precision(.significantDigits(2...4)))
+        } else {
+            number = value.formatted(.number.precision(.fractionLength(fractionDigits)))
+        }
         switch self {
         case .chf: return "CHF " + number
         case .pln: return number + " zł"

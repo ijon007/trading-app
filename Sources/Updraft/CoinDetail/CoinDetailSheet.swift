@@ -142,6 +142,7 @@ struct CoinDetailSheet: View {
         .chartYAxis(.hidden)
         .chartYScale(domain: (lo - pad)...(hi + pad))
         .chartXSelection(value: $selectedDate)
+        .overlay { if points.isEmpty { ChartLoadingPlaceholder().padding(.horizontal, -Space.md) } }
         .frame(height: 220)
         .accessibilityLabel("\(asset.name) price chart, \(timeframe.rawValue)")
     }

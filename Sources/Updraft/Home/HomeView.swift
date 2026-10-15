@@ -51,6 +51,9 @@ struct HomeView: View {
                 }
             }
             .listStyle(.plain)
+            .marketLoading(!MarketStore.shared.hasLoaded)
+            .safeAreaInset(edge: .bottom) { MarketStatusBanner() }
+            .animation(.easeOut(duration: 0.25), value: MarketStore.shared.status)
             .privacyPullToggle()
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)

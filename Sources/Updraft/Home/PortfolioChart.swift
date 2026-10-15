@@ -31,9 +31,15 @@ struct PortfolioHeader: View {
             // Stable identity: an .id(timeframe) swap inside this List row made the
             // cell reload (whole header flashed) on the first scrub after a switch.
             // Drop the animation instead so marks don't interpolate between series.
-            ScrubbableChart(points: points, tint: tint, selectedIndex: $selectedIndex)
-                .transaction(value: timeframe) { $0.animation = nil }
-                .frame(height: 180)
+            Group {
+                if points.isEmpty {
+                    ChartLoadingPlaceholder()
+                } else {
+                    ScrubbableChart(points: points, tint: tint, selectedIndex: $selectedIndex)
+                        .transaction(value: timeframe) { $0.animation = nil }
+                }
+            }
+            .frame(height: 180)
             Picker("Timeframe", selection: $timeframe.animation(.easeInOut(duration: 0.2))) {
                 ForEach(Timeframe.allCases) { Text($0.rawValue).tag($0) }
             }
