@@ -38,8 +38,15 @@ private struct PrivateAmount: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .blur(radius: hidden ? 8 : 0, opaque: false)
-            .opacity(hidden ? 0.6 : 1)
+            // Redacted bar at the text's own size: no digits leak, layout stays put.
+            .opacity(hidden ? 0 : 1)
+            .overlay {
+                if hidden {
+                    Capsule().fill(Theme.textSecondary.opacity(0.22))
+                        .padding(.vertical, 2)
+                        .transition(.opacity)
+                }
+            }
             .privacySensitive(hidden)
             .accessibilityHidden(hidden)
             .animation(reduceMotion ? .easeOut(duration: 0.2) : .smooth(duration: 0.35), value: hidden)
