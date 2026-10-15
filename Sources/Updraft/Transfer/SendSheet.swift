@@ -71,6 +71,9 @@ struct SendSheet: View {
                     Button("Close", systemImage: "xmark") { dismiss() }
                 }
             }
+            .navigationDestination(item: $review) { draft in
+                SendReviewStep(draft: draft) { dismiss() }
+            }
         }
         .onChange(of: holding) {
             network = holding.asset.networks[0]
