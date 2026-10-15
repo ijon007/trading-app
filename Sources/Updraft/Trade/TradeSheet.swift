@@ -34,6 +34,10 @@ enum TradeRules {
     static let limitUSD: Double = 25_000
     static let sellFeeRate: Double = 0.005
 
+    static func percent(_ rate: Double) -> String {
+        (rate * 100).formatted(.number.precision(.fractionLength(0...2))) + "%"
+    }
+
     static func feeRate(for kind: PaymentMethod.Kind) -> Double {
         switch kind {
         case .applePay: 0
@@ -57,6 +61,7 @@ struct TradeSheet: View {
     @State private var payments = PaymentStore()
     @State private var paymentID: UUID?
     @State private var quote: TradeQuote?
+    @State private var methodsOpen = false
 
     init(asset: Asset, side: TradeSide) {
         self.asset = asset
@@ -148,7 +153,7 @@ struct TradeSheet: View {
                     Haptics.tap()
                     quote = makeQuote()
                 } label: {
-                    Text(reviewTitle).font(Typo.headline).frame(maxWidth: .infinity)
+                    Text(reviewTitle).font(Typo.headline).frame(maxWidth: .infinity).padding(.vertical, Space.xxs)
                 }
                 .glassProminentButton()
                 .controlSize(.large)
@@ -158,6 +163,8 @@ struct TradeSheet: View {
             .padding(.horizontal, Space.md)
             .padding(.bottom, Space.xs)
             .background(Theme.background)
+            .dropdownPanel(isOpen: $methodsOpen, options: methodOptions,
+                           selection: Binding(get: { method?.id }, set: { paymentID = $0 }))
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(role: .close) { dismiss() }
@@ -167,7 +174,7 @@ struct TradeSheet: View {
                         ForEach(TradeSide.allCases) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    .frame(width: 180)
+                    .fixedSize()
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -177,7 +184,7 @@ struct TradeSheet: View {
         }
         .sensoryFeedback(.selection, trigger: side)
         .sensoryFeedback(.warning, trigger: isBlockingError) { old, new in !old && new }
-        .onChange(of: side) { reset() }
+        .onChange(of: side) { methodsOpen = false; reset() }
         .onChange(of: isBlockingError) { _, new in if new { shake += 1 } }
         .onAppear { paymentID = paymentID ?? payments.defaultID }
         .presentationDetents([.large])
@@ -240,25 +247,19 @@ struct TradeSheet: View {
 
     // MARK: Method rows
 
+    private var methodOptions: [DropdownOption<UUID>] {
+        payments.methods.map { DropdownOption(id: $0.id, title: $0.title, subtitle: feeSubtitle($0), icon: $0.icon) }
+    }
+
     private var paymentRow: some View {
-        Menu {
-            Picker("Pay with", selection: Binding(get: { method?.id }, set: { paymentID = $0 })) {
-                ForEach(payments.methods) { m in
-                    Label(m.title, systemImage: m.icon).tag(Optional(m.id))
-                }
-            }
-        } label: {
-            methodRow(title: method?.title ?? "Add a payment method",
-                      subtitle: method.map(feeSubtitle) ?? "",
-                      icon: method?.icon ?? "creditcard",
-                      chevron: true)
-        }
-        .sensoryFeedback(.selection, trigger: paymentID)
+        Dropdown(caption: "Pay with", options: methodOptions,
+                 selection: Binding(get: { method?.id }, set: { paymentID = $0 }),
+                 isOpen: $methodsOpen, placeholder: "Add a payment method")
     }
 
     private func feeSubtitle(_ m: PaymentMethod) -> String {
         let rate = TradeRules.feeRate(for: m.kind)
-        let fee = rate == 0 ? "No fee" : (rate * 100).formatted(.number.precision(.fractionLength(0...2))) + "% fee"
+        let fee = rate == 0 ? "No fee" : TradeRules.percent(rate) + " fee"
         switch m.kind {
         case .bank: return fee + " · 1–2 business days"
         default: return fee + " · Instant"
@@ -266,35 +267,11 @@ struct TradeSheet: View {
     }
 
     private var payoutRow: some View {
-        methodRow(title: "Cash balance",
-                  subtitle: (TradeRules.sellFeeRate * 100).formatted(.number.precision(.fractionLength(0...2))) + "% fee · Available instantly",
-                  icon: "banknote", chevron: false)
-    }
-
-    private func methodRow(title: String, subtitle: String, icon: String, chevron: Bool) -> some View {
-        HStack(spacing: Space.sm) {
-            Image(systemName: icon)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: 36, height: 36)
-                .background(Theme.surfaceHi, in: .rect(cornerRadius: Radius.sm))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(side == .buy ? "Pay with" : "Deposit to").font(Typo.caption).foregroundStyle(Theme.textTertiary)
-                Text(title).font(Typo.headline).foregroundStyle(Theme.textPrimary)
-                Text(subtitle).font(Typo.caption).foregroundStyle(Theme.textSecondary)
-            }
-            .lineLimit(1)
-            Spacer(minLength: 0)
-            if chevron {
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.textTertiary)
-            }
-        }
-        .padding(Space.sm)
-        .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
-        .overlay(RoundedRectangle(cornerRadius: Radius.md).strokeBorder(Theme.hairline, lineWidth: 1))
-        .contentShape(.rect)
+        OptionRowLabel(caption: "Deposit to", title: "Cash balance",
+                       subtitle: TradeRules.percent(TradeRules.sellFeeRate) + " fee · Available instantly",
+                       icon: "banknote")
+            .padding(Space.sm)
+            .surfaceCard(radius: Radius.md)
     }
 
     private func makeQuote() -> TradeQuote {
@@ -303,14 +280,14 @@ struct TradeSheet: View {
             let m = method
             let rate = m.map { TradeRules.feeRate(for: $0.kind) } ?? 0
             return TradeQuote(side: .buy, asset: asset, grossUSD: usd, feeUSD: usd * rate,
-                              feeNote: rate == 0 ? "No fee with Apple Pay" : (rate * 100).formatted(.number.precision(.fractionLength(0...2))) + "%",
+                              feeNote: rate == 0 ? "No fee with Apple Pay" : TradeRules.percent(rate),
                               method: m?.title ?? "", methodIcon: m?.icon ?? "creditcard")
         case .sell:
             // "Max" sells the exact balance, never a rounded-up amount.
             let sold = min(coin, balance)
             let gross = sold * asset.price
             return TradeQuote(side: .sell, asset: asset, grossUSD: gross, feeUSD: gross * TradeRules.sellFeeRate,
-                              feeNote: (TradeRules.sellFeeRate * 100).formatted(.number.precision(.fractionLength(0...2))) + "%",
+                              feeNote: TradeRules.percent(TradeRules.sellFeeRate),
                               method: "Cash balance", methodIcon: "banknote")
         }
     }
@@ -344,7 +321,7 @@ private struct TradeReviewScreen: View {
                         Haptics.tap()
                         onDone()
                     } label: {
-                        Text("Done").font(Typo.headline).frame(maxWidth: .infinity)
+                        Text("Done").font(Typo.headline).frame(maxWidth: .infinity).padding(.vertical, Space.xxs)
                     }
                     .glassProminentButton()
                     .controlSize(.large)
@@ -372,7 +349,7 @@ private struct TradeReviewScreen: View {
             ScrollView {
                 TradeReview(rows: rows, total: total) {
                     VStack(spacing: Space.xs) {
-                        CoinIcon(symbol: quote.asset.symbol, size: 48)
+                        CoinIcon(symbol: quote.asset.symbol, size: Space.xxl)
                         Text(buying ? "You get" : "You sell")
                             .font(Typo.callout).foregroundStyle(Theme.textSecondary)
                         Text(quote.asset.coinText(quote.coin))
@@ -403,6 +380,7 @@ private struct TradeReviewScreen: View {
                 }
                 .font(Typo.headline)
                 .frame(maxWidth: .infinity)
+                .padding(.vertical, Space.xxs)
             }
             .glassProminentButton()
             .controlSize(.large)
