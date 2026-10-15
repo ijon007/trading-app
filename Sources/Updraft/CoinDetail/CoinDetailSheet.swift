@@ -7,6 +7,7 @@ struct CoinDetailSheet: View {
     @State private var timeframe: Timeframe = .day
     @State private var selectedDate: Date?
     @State private var trade: TradeSide?
+    @State private var sharingPnL = false
     /// Read so the screen redraws in the new currency.
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
 
@@ -53,6 +54,9 @@ struct CoinDetailSheet: View {
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
         .sheet(item: $trade) { TradeSheet(asset: asset, side: $0) }
+        .sheet(isPresented: $sharingPnL) {
+            if let position = asset.position { PnLShareSheet(asset: asset, position: position) }
+        }
     }
 
     // MARK: Header
@@ -149,6 +153,17 @@ struct CoinDetailSheet: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(Theme.surfaceHi, in: .capsule)
+                Button {
+                    Haptics.tap()
+                    sharingPnL = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(Typo.callout)
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(.leading, Space.xxs)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Share P&L")
             }
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: Space.xxs) {
