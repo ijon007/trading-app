@@ -36,6 +36,9 @@ struct HomeView: View {
                             .listRowSeparatorTint(Theme.hairline)
                             .listRowInsets(EdgeInsets(top: Space.row, leading: Space.md, bottom: Space.row, trailing: Space.md))
                     }
+                    if holdings.isEmpty {
+                        EmptyAccountView { transfer = .receive }.listRowBackground(Color.clear).listRowSeparator(.hidden)
+                    }
                 } header: {
                     Text("Holdings")
                         .font(Typo.headline)
