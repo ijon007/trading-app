@@ -7,7 +7,7 @@ struct CoinDetailSheet: View {
     /// Live view of the coin (price and 24h change follow the market).
     private var asset: Asset { SampleData.assets.first { $0.id == seed.id } ?? seed }
     init(asset: Asset) { seed = asset }
-    @State private var timeframe: Timeframe = .day
+    @State private var timeframe: Timeframe = .hour
     @State private var selectedDate: Date?
     @State private var trade: TradeSide?
     @State private var sharingPnL = false

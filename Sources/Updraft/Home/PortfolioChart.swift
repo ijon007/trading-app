@@ -8,7 +8,7 @@ import Charts
 /// `ScrubbableChart`, and this view only hears about it when the nearest
 /// point index changes, so a drag doesn't rebuild the header on every tick.
 struct PortfolioHeader: View {
-    @State private var timeframe: Timeframe = .day
+    @State private var timeframe: Timeframe = .hour
     @State private var selectedIndex: Int?
     /// Read so the header follows the selected account.
     @AppStorage(Account.storageKey) private var accountID = Account.all[0].id
