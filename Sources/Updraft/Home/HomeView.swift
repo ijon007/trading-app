@@ -59,6 +59,8 @@ struct HomeView: View {
             .scrollContentBackground(.hidden)
             .sensoryFeedback(.selection, trigger: accountID)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
+            .refreshable { await Account.refreshWatch(id: accountID) }
+            .task(id: accountID) { await Account.refreshWatch(id: accountID) }
             .sheet(item: $transfer) { kind in
                 switch kind {
                 case .send: SendSheet()
@@ -91,7 +93,8 @@ struct HomeView: View {
                     .glassCircleButton()
                     .tint(Theme.textPrimary)
                     // Nothing to send or swap from an empty account.
-                    .disabled(holdings.isEmpty && action.title != "Receive")
+                    // Watch accounts are read-only: Receive only.
+                    .disabled((holdings.isEmpty || Account.current.isWatchOnly) && action.title != "Receive")
                     .accessibilityLabel(action.title)
                     Text(action.title).font(Typo.caption).foregroundStyle(Theme.textSecondary)
                 }

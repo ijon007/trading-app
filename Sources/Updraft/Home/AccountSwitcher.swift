@@ -41,7 +41,7 @@ struct AccountSwitcher: View {
             .glassEffect(.regular.interactive(), in: .capsule)
         }
         .menuOrder(.fixed)
-        .sheet(isPresented: $addingAccount) { AddAccountSheet { Account.all.append($0); select($0) } }
+        .sheet(isPresented: $addingAccount) { AddAccountSheet { Account.add($0); select($0) } }
         .accessibilityLabel("Account, \(current.name)")
         .accessibilityHint("Switch account")
     }

@@ -10,7 +10,13 @@ struct ReceiveSheet: View {
     @State private var copied = false
 
     private var asset: Asset { holding.asset }
-    private var address: String { asset.receiveAddress(on: network) }
+    /// A watch account shows its real address on Ethereum networks.
+    private var address: String {
+        if let watched = Account.current.address, network.localizedCaseInsensitiveContains("ethereum") || network.contains("ERC") {
+            return watched
+        }
+        return asset.receiveAddress(on: network)
+    }
 
     var body: some View {
         NavigationStack {
