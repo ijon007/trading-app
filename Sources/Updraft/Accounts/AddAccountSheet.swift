@@ -24,6 +24,9 @@ struct AddAccountSheet: View {
     @State private var symbol = AddAccountSheet.symbols
         .first { s in !Account.all.contains { $0.symbol == s } } ?? "person.fill"
     @State private var secret = ""
+    @State private var usesKey = false
+    /// Create pushes the backup flow before the account is added.
+    @State private var creating = false
     @State private var address = ""
     /// Watch: resolving the ENS name / fetching balances, and the last failure.
     @State private var resolving = false
@@ -36,12 +39,11 @@ struct AddAccountSheet: View {
     @State private var detent: PresentationDetent = .height(520)
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var secretKind: SecretKind { SecretKind(secret) }
     private var canSubmit: Bool {
         guard !trimmedName.isEmpty else { return false }
         switch mode {
         case .create: return true
-        case .importWallet: return secretKind.isValid
+        case .importWallet: return ImportWalletFields.isValid(secret, usesKey: usesKey)
         case .watch: return WatchInput.isValid(address) && !resolving
         }
     }
@@ -79,23 +81,8 @@ struct AddAccountSheet: View {
                     }
 
                     if mode == .importWallet {
-                        field("Recovery phrase or private key") {
-                            VStack(alignment: .leading, spacing: Space.xs) {
-                                TextField("Paste it here", text: $secret, axis: .vertical)
-                                    .font(Typo.body.monospaced())
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .lineLimit(3...6)
-                                    .textInputAutocapitalization(.never)
-                                    .autocorrectionDisabled()
-                                    .focused($focused)
-                                    .padding(Space.md)
-                                    .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
-                                Label(secretKind.message, systemImage: secretKind.isValid ? "checkmark.circle.fill" : "info.circle")
-                                    .font(Typo.caption)
-                                    .foregroundStyle(secretKind.isValid ? Theme.positive : Theme.textSecondary)
-                                    .contentTransition(.interpolate)
-                                    .animation(.smooth(duration: 0.2), value: secretKind.isValid)
-                            }
+                        field("Wallet") {
+                            ImportWalletFields(secret: $secret, usesKey: $usesKey, focused: $focused)
                         }
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                     }
@@ -123,6 +110,15 @@ struct AddAccountSheet: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { submitButton }
+            .navigationDestination(isPresented: $creating) {
+                CreateWalletFlow(name: trimmedName, symbol: symbol) { account in
+                    onAdd(account)
+                    dismiss()
+                }
+            }
+            .onChange(of: creating) { _, on in
+                if on { withAnimation(.smooth(duration: 0.3)) { detent = .large } }
+            }
             .sensoryFeedback(.selection, trigger: mode)
             .sensoryFeedback(.selection, trigger: symbol)
         }
@@ -222,7 +218,7 @@ struct AddAccountSheet: View {
             submit()
         } label: {
             ZStack {
-                Text(mode == .create ? "Create" : mode == .importWallet ? "Import" : "Add")
+                Text(mode == .create ? "Continue" : mode == .importWallet ? "Import" : "Add")
                     .opacity(resolving ? 0 : 1)
                 if resolving { ProgressView().tint(Theme.background) }
             }
@@ -241,7 +237,9 @@ struct AddAccountSheet: View {
         guard canSubmit else { Haptics.error(); return }
         focused = false
         if mode == .watch { addWatch(); return }
-        let account = Account(id: UUID().uuidString, name: trimmedName, symbol: symbol, holdings: [])
+        if mode == .create { creating = true; return }
+        let account = Account(id: UUID().uuidString, name: trimmedName, symbol: symbol, holdings: [],
+                              address: ImportWalletFields.address(secret, usesKey: usesKey))
         Haptics.success()
         onAdd(account)
         dismiss()
@@ -264,42 +262,6 @@ struct AddAccountSheet: View {
                     watchError = (error as? LocalizedError)?.errorDescription ?? "Couldn't add this address. Try again."
                 }
             }
-        }
-    }
-}
-
-/// Light, offline validation for the import mock.
-private enum SecretKind {
-    case empty, phrase(Int), privateKey, invalid
-
-    init(_ raw: String) {
-        let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if text.isEmpty { self = .empty; return }
-        let hex = text.hasPrefix("0x") ? String(text.dropFirst(2)) : text
-        if hex.count == 64, hex.allSatisfy(\.isHexDigit) { self = .privateKey; return }
-        let words = text.split(whereSeparator: \.isWhitespace)
-        if words.allSatisfy({ $0.allSatisfy(\.isLetter) }) {
-            self = .phrase(words.count)
-        } else {
-            self = .invalid
-        }
-    }
-
-    var isValid: Bool {
-        switch self {
-        case .privateKey: true
-        case .phrase(let n): [12, 15, 18, 21, 24].contains(n)
-        default: false
-        }
-    }
-
-    var message: String {
-        switch self {
-        case .empty: "Paste a 12 or 24 word phrase, or a 64 character private key."
-        case .privateKey: "Private key looks good."
-        case .phrase(let n) where isValid: "\(n) word recovery phrase looks good."
-        case .phrase(let n): "\(n) word\(n == 1 ? "" : "s"). Recovery phrases have 12 or 24 words."
-        case .invalid: "That doesn't look like a recovery phrase or private key."
         }
     }
 }
