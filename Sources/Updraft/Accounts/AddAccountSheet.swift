@@ -25,6 +25,9 @@ struct AddAccountSheet: View {
         .first { s in !Account.all.contains { $0.symbol == s } } ?? "person.fill"
     @State private var secret = ""
     @FocusState private var focused: Bool
+    /// Content height (plus nav bar and button insets), so the sheet opens fitted.
+    @State private var fittedHeight: CGFloat = 520
+    @State private var detent: PresentationDetent = .height(520)
 
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var secretKind: SecretKind { SecretKind(secret) }
@@ -84,6 +87,14 @@ struct AddAccountSheet: View {
                 .padding(.bottom, Space.md)
             }
             .scrollIndicators(.hidden)
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                (geo.contentSize.height + geo.contentInsets.top + geo.contentInsets.bottom).rounded()
+            } action: { _, height in
+                guard height > 0, abs(height - fittedHeight) > 1 else { return }
+                let follow = detent == .height(fittedHeight)
+                fittedHeight = height
+                if follow { withAnimation(.smooth(duration: 0.3)) { detent = .height(height) } }
+            }
             .scrollDismissesKeyboard(.interactively)
             .background(Theme.background)
             .navigationTitle("Add account")
@@ -97,7 +108,7 @@ struct AddAccountSheet: View {
             .sensoryFeedback(.selection, trigger: mode)
             .sensoryFeedback(.selection, trigger: symbol)
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(fittedHeight), .large], selection: $detent)
         .presentationDragIndicator(.visible)
     }
 
