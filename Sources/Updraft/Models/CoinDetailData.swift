@@ -1,11 +1,12 @@
 import Foundation
 
 enum Timeframe: String, CaseIterable, Identifiable, Sendable {
-    case day = "1D", week = "1W", month = "1M", year = "1Y", all = "All"
+    case hour = "1H", day = "1D", week = "1W", month = "1M", year = "1Y", all = "All"
     var id: String { rawValue }
 
     var span: TimeInterval {
         switch self {
+        case .hour: 3_600
         case .day: 86_400
         case .week: 7 * 86_400
         case .month: 30 * 86_400
@@ -16,6 +17,7 @@ enum Timeframe: String, CaseIterable, Identifiable, Sendable {
 
     var pointCount: Int {
         switch self {
+        case .hour: 60 // one point a minute
         case .day: 96
         case .week: 84
         case .month: 90
@@ -52,11 +54,12 @@ private struct SeededRandom {
 }
 
 extension Asset {
-    /// Percent change over a timeframe; 1D matches `change24h`.
+    /// Percent change over a timeframe; 1D matches `change24h`, 1H is a small move.
     func change(over timeframe: Timeframe) -> Double {
         guard timeframe != .day else { return change24h }
         var rng = SeededRandom(symbol + timeframe.rawValue + "chg")
         let scale: Double = switch timeframe {
+        case .hour: 1.6
         case .week: 9
         case .month: 22
         case .year: 80

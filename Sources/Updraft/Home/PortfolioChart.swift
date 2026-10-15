@@ -102,7 +102,7 @@ private struct BalanceSummary: View {
 
     private var dateFormat: Date.FormatStyle {
         switch timeframe {
-        case .day: .dateTime.hour().minute()
+        case .hour, .day: .dateTime.hour().minute()
         case .week, .month: .dateTime.month(.abbreviated).day().hour()
         case .year, .all: .dateTime.month(.abbreviated).day().year()
         }
