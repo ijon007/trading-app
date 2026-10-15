@@ -164,7 +164,6 @@ private struct PortfolioPlot: View, Equatable {
         .chartYScale(domain: domain)
         .chartPlotStyle { $0.padding(.zero) }
         .chartXSelection(value: $selection)
-        .drawingGroup()
         .accessibilityLabel("Portfolio balance chart")
     }
 }
