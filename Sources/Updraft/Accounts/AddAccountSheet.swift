@@ -25,6 +25,9 @@ struct AddAccountSheet: View {
         .first { s in !Account.all.contains { $0.symbol == s } } ?? "person.fill"
     @State private var secret = ""
     @State private var address = ""
+    /// Watch: resolving the ENS name / fetching balances, and the last failure.
+    @State private var resolving = false
+    @State private var watchError: String?
     /// Last name we filled in from the address; replaced only while the user hasn't edited it.
     @State private var autoName: String?
     @FocusState private var focused: Bool
@@ -39,7 +42,7 @@ struct AddAccountSheet: View {
         switch mode {
         case .create: return true
         case .importWallet: return secretKind.isValid
-        case .watch: return WatchAddress.isValid(address)
+        case .watch: return WatchInput.isValid(address) && !resolving
         }
     }
 
@@ -128,13 +131,13 @@ struct AddAccountSheet: View {
     }
 
     private var watchFields: some View {
-        let trimmed = WatchAddress.trimmed(address)
-        let valid = WatchAddress.isValid(address)
+        let trimmed = WatchInput.trimmed(address)
+        let valid = WatchInput.isValid(address)
         return VStack(alignment: .leading, spacing: Space.md) {
             field("Address") {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack(spacing: Space.xs) {
-                        TextField("0x…", text: $address)
+                        TextField("0x… or name.eth", text: $address)
                             .font(Typo.body.monospaced())
                             .foregroundStyle(Theme.textPrimary)
                             .textInputAutocapitalization(.never)
@@ -155,9 +158,10 @@ struct AddAccountSheet: View {
                     .padding(.trailing, Space.sm)
                     .padding(.vertical, Space.sm)
                     .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
-                    Label(WatchAddress.hint(address), systemImage: valid ? "checkmark.circle.fill" : "info.circle")
+                    Label(watchError ?? WatchInput.hint(address),
+                          systemImage: watchError != nil ? "exclamationmark.circle.fill" : valid ? "checkmark.circle.fill" : "info.circle")
                         .font(Typo.caption)
-                        .foregroundStyle(valid ? Theme.positive : (trimmed.isEmpty ? Theme.textSecondary : Theme.negative))
+                        .foregroundStyle(watchError != nil ? Theme.negative : valid ? Theme.positive : (trimmed.isEmpty ? Theme.textSecondary : Theme.negative))
                         .contentTransition(.interpolate)
                         .animation(.smooth(duration: 0.2), value: valid)
                 }
@@ -172,8 +176,9 @@ struct AddAccountSheet: View {
             }
         }
         .onChange(of: address) { _, new in
-            guard WatchAddress.isValid(new) else { return }
-            let short = WatchAddress.short(new)
+            watchError = nil
+            guard WatchInput.isValid(new) else { return }
+            let short = WatchInput.short(new)
             // Prefill the name unless the user typed their own.
             if autoName == trimmedName || name == "Account \(Account.all.count + 1)" {
                 name = short
@@ -216,9 +221,14 @@ struct AddAccountSheet: View {
         Button {
             submit()
         } label: {
-            Text(mode == .create ? "Create" : mode == .importWallet ? "Import" : "Add")
-                .font(Typo.headline)
-                .frame(maxWidth: .infinity)
+            ZStack {
+                Text(mode == .create ? "Create" : mode == .importWallet ? "Import" : "Add")
+                    .opacity(resolving ? 0 : 1)
+                if resolving { ProgressView().tint(Theme.background) }
+            }
+            .font(Typo.headline)
+            .frame(maxWidth: .infinity)
+            .animation(.smooth(duration: 0.2), value: resolving)
         }
         .glassProminentButton()
         .controlSize(.large)
@@ -230,15 +240,31 @@ struct AddAccountSheet: View {
     private func submit() {
         guard canSubmit else { Haptics.error(); return }
         focused = false
-        // TODO(accounts): once Account has `isWatchOnly` and `address`, pass them here
-        // (from `watch`) and let the data layer fetch the balance. Until then the
-        // watched address only lives in this local value.
-        let watch = mode == .watch ? WatchAddress(address: WatchAddress.trimmed(address)) : nil
-        let account = Account(id: watch.map { "watch-" + $0.address.lowercased() } ?? UUID().uuidString,
-                              name: trimmedName, symbol: watch == nil ? symbol : "eye.fill", holdings: [])
+        if mode == .watch { addWatch(); return }
+        let account = Account(id: UUID().uuidString, name: trimmedName, symbol: symbol, holdings: [])
         Haptics.success()
         onAdd(account)
         dismiss()
+    }
+
+    /// Resolves the address or ENS name and loads balances via the data layer.
+    private func addWatch() {
+        resolving = true
+        watchError = nil
+        Task {
+            do {
+                let account = try await Accounts.addWatch(address: WatchInput.trimmed(address), name: trimmedName)
+                Haptics.success()
+                onAdd(account)
+                dismiss()
+            } catch {
+                resolving = false
+                Haptics.error()
+                withAnimation(.smooth(duration: 0.2)) {
+                    watchError = (error as? LocalizedError)?.errorDescription ?? "Couldn't add this address. Try again."
+                }
+            }
+        }
     }
 }
 
@@ -278,32 +304,40 @@ private enum SecretKind {
     }
 }
 
-/// Watch-only target (placeholder until Account carries `isWatchOnly`/`address`).
-struct WatchAddress: Hashable, Sendable {
-    let address: String
-    var isWatchOnly: Bool { true }
-
+/// Light validation for the watch field: a 0x address or an ENS name.
+private enum WatchInput {
     static func trimmed(_ raw: String) -> String { raw.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     /// Ethereum address: 0x plus 40 hex characters.
-    static func isValid(_ raw: String) -> Bool {
-        let t = trimmed(raw)
-        guard t.count == 42, t.lowercased().hasPrefix("0x") else { return false }
-        return t.dropFirst(2).allSatisfy(\.isHexDigit)
+    static func isAddress(_ t: String) -> Bool {
+        t.count == 42 && t.lowercased().hasPrefix("0x") && t.dropFirst(2).allSatisfy(\.isHexDigit)
     }
+
+    /// ENS name like vitalik.eth: dot-separated labels of letters, digits and hyphens.
+    static func isENS(_ t: String) -> Bool {
+        let lower = t.lowercased()
+        guard lower.hasSuffix(".eth"), lower.count > 4 else { return false }
+        let labels = lower.split(separator: ".", omittingEmptySubsequences: false)
+        return labels.allSatisfy { !$0.isEmpty && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" } }
+    }
+
+    static func isValid(_ raw: String) -> Bool { let t = trimmed(raw); return isAddress(t) || isENS(t) }
 
     static func short(_ raw: String) -> String {
         let t = trimmed(raw)
-        return String(t.prefix(6)) + "…" + String(t.suffix(4))
+        return isENS(t) ? t.lowercased() : String(t.prefix(6)) + "…" + String(t.suffix(4))
     }
 
     static func hint(_ raw: String) -> String {
         let t = trimmed(raw)
-        if t.isEmpty { return "Paste an Ethereum address that starts with 0x." }
-        if isValid(t) { return "Valid Ethereum address." }
-        if !t.lowercased().hasPrefix("0x") { return "Addresses start with 0x." }
-        let body = t.dropFirst(2)
-        if !body.allSatisfy(\.isHexDigit) { return "Only 0–9 and a–f after 0x." }
-        return "\(body.count) of 40 characters after 0x."
+        if t.isEmpty { return "Paste an Ethereum address (0x…) or an ENS name." }
+        if isAddress(t) { return "Valid Ethereum address." }
+        if isENS(t) { return "ENS name. We'll look up its address." }
+        if t.lowercased().hasPrefix("0x") {
+            let body = t.dropFirst(2)
+            if !body.allSatisfy(\.isHexDigit) { return "Only 0–9 and a–f after 0x." }
+            return "\(body.count) of 40 characters after 0x."
+        }
+        return "Use a 0x address or a name ending in .eth."
     }
 }
