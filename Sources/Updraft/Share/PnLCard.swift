@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 /// The P&L numbers a share card shows for one position over a timeframe.
 struct PnLSummary {
@@ -68,8 +69,7 @@ struct PnLCard: View {
                     }
                 }
             }
-            Sparkline(values: summary.values)
-                .stroke(tint, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+            PnLChart(values: summary.values, tint: tint)
                 .frame(maxHeight: .infinity)
             Text(asset.symbol + " position")
                 .font(Typo.caption)
@@ -105,5 +105,33 @@ struct UpdraftLogoShape: Shape {
             path.closeSubpath()
         }
         return path
+    }
+}
+
+/// Mini chart with the same line and soft gradient area as the Home and coin charts.
+private struct PnLChart: View {
+    let values: [Double]
+    let tint: Color
+
+    var body: some View {
+        let lo = values.min() ?? 0, hi = values.max() ?? 1
+        let pad = (hi - lo) * 0.08
+        Chart(Array(values.enumerated()), id: \.offset) { i, value in
+            AreaMark(x: .value("Index", i),
+                     yStart: .value("Base", lo - pad),
+                     yEnd: .value("Value", value))
+                .interpolationMethod(.monotone)
+                .foregroundStyle(LinearGradient(colors: [tint.opacity(0.22), tint.opacity(0)],
+                                                startPoint: .top, endPoint: .bottom))
+            LineMark(x: .value("Index", i), y: .value("Value", value))
+                .interpolationMethod(.monotone)
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                .foregroundStyle(tint)
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis(.hidden)
+        .chartLegend(.hidden)
+        .chartYScale(domain: (lo - pad)...(hi + pad))
+        .chartPlotStyle { $0.padding(.zero) }
     }
 }
