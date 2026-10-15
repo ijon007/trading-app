@@ -47,6 +47,7 @@ struct HomeView: View {
                 switch kind {
                 case .send: SendSheet()
                 case .receive: ReceiveSheet()
+                case .swap: SwapSheet()
                 }
             }
             .background(Theme.background)
@@ -78,6 +79,7 @@ struct HomeView: View {
                         switch action.title {
                         case "Send": transfer = .send
                         case "Receive": transfer = .receive
+                        case "Swap": transfer = .swap
                         default: break
                         }
                     } label: {

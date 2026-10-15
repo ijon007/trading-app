@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Which transfer drawer is open from Home.
 enum TransferKind: String, Identifiable {
-    case send, receive
+    case send, receive, swap
     var id: String { rawValue }
 }
 
