@@ -55,6 +55,10 @@ private struct BalanceSummary: View {
             Text("Total balance")
                 .font(Typo.callout)
                 .foregroundStyle(Theme.textSecondary)
+                // Debug: long-press to replay onboarding.
+                .contextMenu {
+                    Button("Replay onboarding", systemImage: "arrow.counterclockwise") { OnboardingAnswers.reset() }
+                }
             Text(value.fiat)
                 .heroNumeral()
                 .foregroundStyle(Theme.textPrimary)
