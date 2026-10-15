@@ -26,6 +26,11 @@ struct CatalogCoin: Sendable, Equatable, Identifiable {
     let marketCap: Double
     /// Seven days of hourly prices, oldest first.
     let sparkline: [Double]
+    let totalVolume: Double?
+    let circulatingSupply: Double?
+    let maxSupply: Double?
+    let allTimeHigh: Double?
+    let rank: Int?
     var id: String { symbol }
 }
 
@@ -233,6 +238,11 @@ final class MarketStore: @unchecked Sendable {
         let market_cap: Double?
         let price_change_percentage_24h: Double?
         let sparkline_in_7d: Sparkline?
+        let total_volume: Double?
+        let circulating_supply: Double?
+        let max_supply: Double?
+        let ath: Double?
+        let market_cap_rank: Int?
     }
 
     /// Top 100 coins by market cap with names, logos, caps, 7d sparklines and
@@ -255,7 +265,9 @@ final class MarketStore: @unchecked Sendable {
             list.append(CatalogCoin(symbol: symbol, name: coin.name, geckoID: coin.id,
                                     image: coin.image.flatMap(URL.init(string:)), price: price,
                                     change24h: change, marketCap: coin.market_cap ?? 0,
-                                    sparkline: coin.sparkline_in_7d?.price ?? []))
+                                    sparkline: coin.sparkline_in_7d?.price ?? [],
+                                    totalVolume: coin.total_volume, circulatingSupply: coin.circulating_supply,
+                                    maxSupply: coin.max_supply, allTimeHigh: coin.ath, rank: coin.market_cap_rank))
             if var existing = next[symbol], streamed.contains(symbol) {
                 existing.marketCap = coin.market_cap ?? existing.marketCap
                 next[symbol] = existing

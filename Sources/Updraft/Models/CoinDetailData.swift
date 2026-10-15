@@ -33,12 +33,25 @@ struct PricePoint: Identifiable, Hashable, Sendable {
     var id: Date { date }
 }
 
+/// Market stats for coin detail. Nil fields show as an em dash.
 struct MarketInfo: Sendable {
-    let marketCap: Double
-    let volume24h: Double
-    let circulatingSupply: Double
-    let allTimeHigh: Double
-    let rank: Int
+    let marketCap: Double?
+    let volume24h: Double?
+    let circulatingSupply: Double?
+    let maxSupply: Double?
+    let allTimeHigh: Double?
+    let rank: Int?
+
+    static let missing = "\u{2014}"
+
+    var marketCapText: String { marketCap.map(\.compactFiat) ?? Self.missing }
+    var volumeText: String { volume24h.map(\.compactFiat) ?? Self.missing }
+    var allTimeHighText: String { allTimeHigh.map(\.fiat) ?? Self.missing }
+    var rankText: String { rank.map { "#\($0)" } ?? Self.missing }
+    func supplyText(_ value: Double?, symbol: String) -> String {
+        guard let value, value > 0 else { return Self.missing }
+        return value.formatted(.number.notation(.compactName).precision(.fractionLength(0...2))) + " " + symbol
+    }
 }
 
 /// Seeded generator so every coin always draws the same sample data.
@@ -116,12 +129,19 @@ extension Asset {
     }
 
     var marketInfo: MarketInfo {
+        // Real stats from CoinGecko /coins/markets when the coin is in the catalog.
+        if let coin = MarketStore.shared.catalogCoin(symbol) {
+            return MarketInfo(marketCap: marketCap, volume24h: coin.totalVolume,
+                              circulatingSupply: coin.circulatingSupply, maxSupply: coin.maxSupply,
+                              allTimeHigh: coin.allTimeHigh, rank: coin.rank)
+        }
         var rng = SeededRandom(symbol + "info")
         let rank = (SampleData.assets.sorted { $0.marketCap > $1.marketCap }.firstIndex(of: self) ?? 0) + 1
         return MarketInfo(
             marketCap: marketCap,
             volume24h: marketCap * (0.02 + rng.next() * 0.06),
             circulatingSupply: marketCap / price,
+            maxSupply: nil,
             allTimeHigh: price * (1.05 + rng.next() * 0.9),
             rank: rank
         )

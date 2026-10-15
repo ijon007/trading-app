@@ -241,11 +241,12 @@ struct CoinDetailSheet: View {
                 .font(Typo.headline)
                 .foregroundStyle(Theme.textPrimary)
                 .padding(.bottom, Space.xs)
-            infoRow("Market cap", info.marketCap.compactFiat)
-            infoRow("24h volume", info.volume24h.compactFiat)
-            infoRow("Circulating supply", "\(info.circulatingSupply.formatted(.number.notation(.compactName).precision(.fractionLength(0...2)))) \(asset.symbol)")
-            infoRow("All-time high", info.allTimeHigh.fiat)
-            infoRow("Rank", "#\(info.rank)", divider: false)
+            infoRow("Market cap", info.marketCapText)
+            infoRow("24h volume", info.volumeText)
+            infoRow("Circulating supply", info.supplyText(info.circulatingSupply, symbol: asset.symbol))
+            infoRow("Max supply", info.supplyText(info.maxSupply, symbol: asset.symbol))
+            infoRow("All-time high", info.allTimeHighText)
+            infoRow("Rank", info.rankText, divider: false)
         }
     }
 
