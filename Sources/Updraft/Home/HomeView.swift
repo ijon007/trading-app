@@ -2,6 +2,7 @@ import SwiftUI
 
 struct HomeView: View {
     @State private var selected: Asset?
+    @State private var transfer: TransferKind?
     /// Read so the screen redraws in the new currency.
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
     private let holdings = SampleData.holdings
@@ -42,6 +43,12 @@ struct HomeView: View {
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
+            .sheet(item: $transfer) { kind in
+                switch kind {
+                case .send: SendSheet()
+                case .receive: ReceiveSheet()
+                }
+            }
             .background(Theme.background)
             .toolbar(.hidden, for: .navigationBar)
         }
@@ -68,6 +75,11 @@ struct HomeView: View {
                 VStack(spacing: Space.xs) {
                     Button {
                         Haptics.tap() // light impact
+                        switch action.title {
+                        case "Send": transfer = .send
+                        case "Receive": transfer = .receive
+                        default: break
+                        }
                     } label: {
                         Image(systemName: action.icon)
                             .font(.system(size: 18, weight: .semibold))
