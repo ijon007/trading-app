@@ -72,6 +72,9 @@ struct ExploreView: View {
             .navigationTitle("Explore")
             .toolbarTitleDisplayMode(.large)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search coins")
+            .scrollDismissesKeyboard(.immediately)
+            // Tap on empty space ends search editing; rows and buttons still get their taps.
+            .simultaneousGesture(TapGesture().onEnded { Keyboard.dismiss() })
             .sensoryFeedback(.selection, trigger: filter)
             .animation(.spring(response: 0.35, dampingFraction: 1), value: filter)
             .overlay {
