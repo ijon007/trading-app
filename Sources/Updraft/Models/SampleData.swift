@@ -44,7 +44,13 @@ enum SampleData {
         return (totalBalance - prev) / prev * 100
     }
 
-    static let profile = (name: "Jon", handle: "@jon")
+    /// Name from onboarding, falling back to the sample user.
+    static var profile: (name: String, handle: String) {
+        let saved = UserDefaults.standard.string(forKey: "onboarding.name") ?? ""
+        let name = saved.isEmpty ? "Jon" : saved
+        let handle = "@" + name.lowercased().replacingOccurrences(of: " ", with: "")
+        return (name, handle)
+    }
 }
 
 extension Double {
