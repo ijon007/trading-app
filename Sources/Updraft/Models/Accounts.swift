@@ -1,25 +1,92 @@
 import Foundation
+import Observation
 
 /// An account is a wallet: its own name, balance and holdings.
+/// Owned accounts hold sample amounts; watch accounts track a real Ethereum address.
 struct Account: Identifiable, Hashable, Sendable {
+    enum Kind: String, Codable, Sendable { case owned, watch }
+
     let id: String
     let name: String
     /// SF Symbol used for the account's avatar.
     let symbol: String
-    let holdings: [Holding]
+    var holdings: [Holding]
+    /// Watch-only accounts track a real address and can't send or swap.
+    var isWatchOnly: Bool = false
+    /// Ethereum address for watch accounts.
+    var address: String? = nil
 
-    /// Sample amounts valued at live prices.
+    var kind: Kind { isWatchOnly ? .watch : .owned }
+    var isWatch: Bool { isWatchOnly }
+
+    /// Amounts valued at live prices.
     var liveHoldings: [Holding] { holdings.map { Holding(asset: SampleData.asset($0.asset.id), amount: $0.amount) } }
 
     var totalBalance: Double { liveHoldings.reduce(0) { $0 + $1.value } }
+}
+
+/// Observable home for the account list, so views redraw when accounts are
+/// added or watch balances refresh. Persists everything except the built-in samples.
+@Observable
+final class AccountStore: @unchecked Sendable {
+    static let shared = AccountStore()
+
+    var accounts: [Account] {
+        didSet { save() }
+    }
+
+    private static let fileKey = "accounts.saved.v1"
+
+    private init() {
+        accounts = Account.samples + Self.load()
+    }
+
+    // MARK: Persistence
+
+    private struct Stored: Codable {
+        struct Amount: Codable { let symbol: String; let amount: Double }
+        let id: String
+        let name: String
+        let symbol: String
+        let kind: Account.Kind
+        let address: String?
+        let holdings: [Amount]
+    }
+
+    private func save() {
+        let sampleIDs = Set(Account.samples.map(\.id))
+        let stored = accounts.filter { !sampleIDs.contains($0.id) }.map { a in
+            Stored(id: a.id, name: a.name, symbol: a.symbol, kind: a.kind, address: a.address,
+                   holdings: a.holdings.map { .init(symbol: $0.asset.id, amount: $0.amount) })
+        }
+        if let data = try? JSONEncoder().encode(stored) {
+            UserDefaults.standard.set(data, forKey: Self.fileKey)
+        }
+    }
+
+    private static func load() -> [Account] {
+        guard let data = UserDefaults.standard.data(forKey: fileKey),
+              let stored = try? JSONDecoder().decode([Stored].self, from: data) else { return [] }
+        return stored.map { s in
+            Account(id: s.id, name: s.name, symbol: s.symbol,
+                    holdings: s.holdings.map { Holding(asset: SampleData.asset($0.symbol), amount: $0.amount) },
+                    isWatchOnly: s.kind == .watch, address: s.address)
+        }
+    }
 }
 
 extension Account {
     /// UserDefaults key for the selected account id.
     static let storageKey = "account.current"
 
-    /// Sample accounts. "Main" keeps the original sample portfolio.
-    nonisolated(unsafe) static var all: [Account] = [
+    /// All accounts (built-in samples, then created and watch accounts). Persisted.
+    static var all: [Account] {
+        get { AccountStore.shared.accounts }
+        set { AccountStore.shared.accounts = newValue }
+    }
+
+    /// Built-in sample accounts. "Main" keeps the original sample portfolio.
+    static let samples: [Account] = [
         Account(id: "main", name: "Main", symbol: "person.fill", holdings: [
             Holding(asset: SampleData.asset("BTC"), amount: 0.4821),
             Holding(asset: SampleData.asset("ETH"), amount: 6.25),
@@ -45,4 +112,63 @@ extension Account {
         let id = UserDefaults.standard.string(forKey: storageKey)
         return all.first { $0.id == id } ?? all[0]
     }
+
+    // MARK: Watch accounts
+
+    /// Adds a watch-only account for an Ethereum address or ENS name, with its
+    /// real balances, and returns it. Throws `EthereumWatch.WatchError` on bad
+    /// input or network failure. Does not select it.
+    @MainActor @discardableResult
+    static func addWatch(address input: String, name: String) async throws -> Account {
+        let address = try await EthereumWatch.resolve(input)
+        let balances = try await EthereumWatch.balances(of: address)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let account = Account(
+            id: UUID().uuidString,
+            name: trimmed.isEmpty ? shortAddress(address) : trimmed,
+            symbol: "eye.fill",
+            holdings: balances.map { Holding(asset: SampleData.asset($0.symbol), amount: $0.amount) },
+            isWatchOnly: true,
+            address: address
+        )
+        all.append(account)
+        return account
+    }
+
+    /// Re-fetches balances for a watch account. No-op for owned accounts.
+    @MainActor
+    static func refreshWatch(id: String) async {
+        guard let account = all.first(where: { $0.id == id }), account.isWatch, let address = account.address,
+              let balances = try? await EthereumWatch.balances(of: address),
+              let index = all.firstIndex(where: { $0.id == id }) else { return }
+        all[index].holdings = balances.map { Holding(asset: SampleData.asset($0.symbol), amount: $0.amount) }
+    }
+
+    /// Adds an account from the add-account sheet. A watch account without
+    /// an address yet (id "watch-0x…") gets one from its id; its balances load right away.
+    @MainActor
+    static func add(_ account: Account) {
+        var account = account
+        if account.id.hasPrefix("watch-"), account.address == nil {
+            let address = String(account.id.dropFirst(6))
+            if EthereumWatch.isValidAddress(address) { account.isWatchOnly = true; account.address = address }
+        }
+        if let i = all.firstIndex(where: { $0.id == account.id }) { all[i] = account } else { all.append(account) }
+        if account.isWatchOnly { Task { await refreshWatch(id: account.id) } }
+    }
+
+    /// 0x1234…abcd
+    static func shortAddress(_ address: String) -> String {
+        address.count > 12 ? "\(address.prefix(6))…\(address.suffix(4))" : address
+    }
+}
+
+/// Convenience namespace for account actions used by UI (e.g. the add-account sheet).
+enum Accounts {
+    @MainActor @discardableResult
+    static func addWatch(address: String, name: String) async throws -> Account {
+        try await Account.addWatch(address: address, name: name)
+    }
+
+    @MainActor static func refresh(id: String) async { await Account.refreshWatch(id: id) }
 }

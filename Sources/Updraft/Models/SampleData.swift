@@ -52,7 +52,12 @@ enum SampleData {
         return list
     }
 
-    static func asset(_ s: String) -> Asset { assets.first { $0.id == s } ?? baseAssets.first { $0.id == s }! }
+    /// Any coin by symbol; unknown symbols (e.g. a token before the catalog loads)
+    /// get a zero-priced placeholder instead of crashing.
+    static func asset(_ s: String) -> Asset {
+        assets.first { $0.id == s } ?? baseAssets.first { $0.id == s }
+            ?? Asset(id: s, name: s, price: 0, change24h: 0, marketCap: 0)
+    }
 
     /// Holdings of the selected account; everything else derives from this.
     static var holdings: [Holding] { Account.current.liveHoldings }
