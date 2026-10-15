@@ -10,6 +10,8 @@ import Charts
 struct PortfolioHeader: View {
     @State private var timeframe: Timeframe = .day
     @State private var selectedIndex: Int?
+    /// Read so the header follows the selected account.
+    @AppStorage(Account.storageKey) private var accountID = Account.all[0].id
 
     private var points: [PricePoint] { SampleData.balanceSeries(timeframe) }
 
@@ -38,6 +40,7 @@ struct PortfolioHeader: View {
         .sensoryFeedback(.selection, trigger: timeframe)
         .sensoryFeedback(.selection, trigger: selectedIndex) { _, new in new != nil }
         .onChange(of: timeframe) { selectedIndex = nil }
+        .onChange(of: accountID) { selectedIndex = nil }
     }
 }
 

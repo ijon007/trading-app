@@ -5,7 +5,9 @@ struct HomeView: View {
     @State private var transfer: TransferKind?
     /// Read so the screen redraws in the new currency.
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
-    private let holdings = SampleData.holdings
+    /// Selected account; Home redraws (animated) when it changes.
+    @AppStorage(Account.storageKey) private var accountID = Account.all[0].id
+    private var holdings: [Holding] { Account.all.first { $0.id == accountID }?.holdings ?? SampleData.holdings }
     private let actions: [(title: String, icon: String)] = [
         ("Swap", "arrow.left.arrow.right"), ("Send", "arrow.up"), ("Receive", "arrow.down"),
     ]
@@ -14,6 +16,7 @@ struct HomeView: View {
         NavigationStack {
             List {
                 VStack(spacing: Space.lg) {
+                    AccountSwitcher(accountID: $accountID)
                     PortfolioHeader()
                     quickActions
                 }
@@ -42,6 +45,7 @@ struct HomeView: View {
             .listStyle(.plain)
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
+            .sensoryFeedback(.selection, trigger: accountID)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .sheet(item: $transfer) { kind in
                 switch kind {
