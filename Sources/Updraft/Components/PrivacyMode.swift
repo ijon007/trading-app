@@ -36,17 +36,15 @@ private struct PrivateAmount: ViewModifier {
     @AppStorage(PrivacyMode.storageKey) private var hidden = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    @State private var height: CGFloat = 17
+
     func body(content: Content) -> some View {
         content
-            // Redacted bar at the text's own size: no digits leak, layout stays put.
-            .opacity(hidden ? 0 : 1)
-            .overlay {
-                if hidden {
-                    Capsule().fill(Theme.textSecondary.opacity(0.22))
-                        .padding(.vertical, 2)
-                        .transition(.opacity)
-                }
-            }
+            // Blur scales with text size (~0.35x line height), so the big
+            // header hides as fully as a caption.
+            .blur(radius: hidden ? max(4, height * 0.35) : 0, opaque: false)
+            .opacity(hidden ? 0.7 : 1)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             .privacySensitive(hidden)
             .accessibilityHidden(hidden)
             .animation(reduceMotion ? .easeOut(duration: 0.2) : .smooth(duration: 0.35), value: hidden)
