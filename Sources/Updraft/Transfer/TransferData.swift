@@ -58,39 +58,128 @@ extension View {
     }
 }
 
-/// Asset picker row shared by Send and Receive.
+extension SampleData {
+    /// Every listed asset as a holding (amount 0 when not held), for "to" pickers.
+    static var allAssetsAsHoldings: [Holding] {
+        assets.map { a in holdings.first { $0.asset.id == a.id } ?? Holding(asset: a, amount: 0) }
+    }
+}
+
+/// Coin selector row: logo, name and balance. Opens `CoinSelectorList`.
 struct AssetPickerRow: View {
     @Binding var holding: Holding
     var showBalance = true
+    var options: [Holding] = SampleData.holdings
+    var title = "Select coin"
+    @State private var isOpen = false
 
     var body: some View {
-        Menu {
-            Picker("Asset", selection: $holding) {
-                ForEach(SampleData.holdings) { h in
-                    Text("\(h.asset.name) · \(h.amount.units) \(h.asset.symbol)").tag(h)
-                }
-            }
+        Button {
+            Haptics.tap()
+            isOpen = true
         } label: {
             HStack(spacing: Space.sm) {
                 CoinIcon(symbol: holding.asset.symbol, size: 36)
+                    .id(holding.id)
+                    .transition(.scale(scale: 0.8).combined(with: .opacity))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(holding.asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
-                    if showBalance {
-                        Text("Balance \(holding.amount.units) \(holding.asset.symbol)")
-                            .font(Typo.figure).foregroundStyle(Theme.textSecondary)
-                    } else {
-                        Text(holding.asset.symbol).font(Typo.figure).foregroundStyle(Theme.textSecondary)
-                    }
+                    Text(showBalance ? "Balance \(holding.amount.units) \(holding.asset.symbol)" : holding.asset.symbol)
+                        .font(Typo.figure).foregroundStyle(Theme.textSecondary)
+                        .contentTransition(.numericText())
                 }
                 Spacer()
-                Image(systemName: "chevron.up.chevron.down")
+                Image(systemName: "chevron.down")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Theme.textTertiary)
+                    .rotationEffect(.degrees(isOpen ? 180 : 0))
             }
+            .animation(.snappy, value: holding)
+            .animation(.snappy, value: isOpen)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Asset, \(holding.asset.name)")
+        .accessibilityLabel("Coin, \(holding.asset.name)")
+        .accessibilityHint("Opens the coin list")
+        .sheet(isPresented: $isOpen) {
+            CoinSelectorList(selection: $holding, options: options, title: title)
+        }
+    }
+}
+
+/// Custom coin list with logos, balances and a checkmark on the current pick.
+struct CoinSelectorList: View {
+    @Binding var selection: Holding
+    let options: [Holding]
+    let title: String
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(options) { h in
+                        Button {
+                            withAnimation(.snappy) { selection = h }
+                            dismiss()
+                        } label: {
+                            row(h)
+                        }
+                        .buttonStyle(CoinRowStyle())
+                        if h.id != options.last?.id {
+                            Divider().overlay(Theme.hairline).padding(.leading, 64)
+                        }
+                    }
+                }
+                .padding(.horizontal, Space.xs)
+            }
+            .scrollIndicators(.hidden)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Close", systemImage: "xmark") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func row(_ h: Holding) -> some View {
+        let isSelected = h.id == selection.id
+        return HStack(spacing: Space.sm) {
+            CoinIcon(symbol: h.asset.symbol, size: 38)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(h.asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
+                Text(h.asset.symbol).font(Typo.figure).foregroundStyle(Theme.textSecondary)
+            }
+            Spacer()
+            if h.amount > 0 {
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(h.value.fiat).font(Typo.figure).foregroundStyle(Theme.textPrimary)
+                    Text("\(h.amount.units) \(h.asset.symbol)").font(Typo.caption).foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Image(systemName: "checkmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(Theme.textPrimary)
+                .opacity(isSelected ? 1 : 0)
+                .frame(width: 18)
+        }
+        .padding(.horizontal, Space.sm)
+        .padding(.vertical, Space.row)
+        .contentShape(Rectangle())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+/// Soft highlight while a coin row is pressed.
+private struct CoinRowStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(Theme.textPrimary.opacity(configuration.isPressed ? 0.06 : 0), in: .rect(cornerRadius: Radius.md))
+            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 
