@@ -112,10 +112,16 @@ final class SeriesCache: @unchecked Sendable {
     private let lifetime: TimeInterval = 60
 
     func value(for key: String, make: () -> [PricePoint]) -> [PricePoint] {
-        lock.lock(); defer { lock.unlock() }
-        if let hit = store[key], Date.now.timeIntervalSince(hit.made) < lifetime { return hit.points }
+        // Never call make() while holding the lock: the portfolio series builds
+        // from coin series through this same cache, and NSLock is not re-entrant.
+        lock.lock()
+        let hit = store[key]
+        lock.unlock()
+        if let hit, Date.now.timeIntervalSince(hit.made) < lifetime { return hit.points }
         let points = make()
+        lock.lock()
         store[key] = (.now, points)
+        lock.unlock()
         return points
     }
 }
