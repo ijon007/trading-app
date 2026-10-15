@@ -328,18 +328,35 @@ private struct TransferVisual: View {
                 .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Theme.hairline, lineWidth: 1))
                 .overlay { UpdraftMark(size: 34) }
                 .staggered(0, active: active)
-            HStack(spacing: Space.xs) {
-                Image(systemName: sent ? "checkmark.circle.fill" : "paperplane")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(sent ? Theme.positive : Theme.textPrimary)
-                    .contentTransition(.symbolEffect(.replace))
-                Text(sent ? "0.25 ETH received" : "Sending 0.25 ETH")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Theme.textPrimary)
-                    .contentTransition(.interpolate)
+            // Icon and label swap together in place: both states share one
+            // centered frame (sized to the longer label), so nothing shifts.
+            HStack(alignment: .center, spacing: Space.xs) {
+                ZStack {
+                    ProgressView()
+                        .controlSize(.small)
+                        .opacity(sent ? 0 : 1)
+                        .blur(radius: sent ? 3 : 0)
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(Theme.positive)
+                        .opacity(sent ? 1 : 0)
+                        .scaleEffect(sent || reduceMotion ? 1 : 0.7)
+                        .blur(radius: sent ? 0 : 3)
+                }
+                .frame(width: 20, height: 20)
+                ZStack {
+                    Text("Sending 0.25 ETH")
+                        .opacity(sent ? 0 : 1)
+                        .blur(radius: sent ? 3 : 0)
+                    Text("0.25 ETH received")
+                        .opacity(sent ? 1 : 0)
+                        .blur(radius: sent ? 0 : 3)
+                }
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(Theme.textPrimary)
             }
             .padding(.horizontal, Space.md)
-            .padding(.vertical, Space.sm)
+            .frame(height: 40)
             .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
             .staggered(1, active: active)
         }
