@@ -20,11 +20,12 @@ struct OptionRowLabel<Accessory: View>: View {
     var body: some View {
         HStack(spacing: Space.sm) {
             if let icon {
+                // Bare glyph like the Verification rows: fixed width so titles align.
                 Image(systemName: icon)
                     .font(Typo.headline)
+                    .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(Theme.textPrimary)
-                    .frame(width: Space.xl + Space.xs, height: Space.xl + Space.xs)
-                    .background(Theme.surfaceHi, in: .rect(cornerRadius: Radius.sm))
+                    .frame(width: Space.lg + Space.xxs)
             }
             VStack(alignment: .leading, spacing: Space.xxs / 2) {
                 if let caption {
@@ -108,7 +109,7 @@ struct Dropdown<ID: Hashable>: View {
             .padding(Space.sm)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radius.md))
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: Radius.lg))
         .glassEffectID("field", in: glass)
         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowHeight = $0 }
         .accessibilityValue(current?.title ?? placeholder)
