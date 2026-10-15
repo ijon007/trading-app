@@ -72,6 +72,7 @@ struct ExploreView: View {
             .environment(\.defaultMinListRowHeight, 0)
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
+            .contentMargins(.bottom, Space.lg, for: .scrollContent) // clear of the floating tab bar
             // Even rhythm: search → Top gainers (8) → cards (12, also the shadow room)
             // → filter (16) → list. No extra top margin or section spacing.
             .contentMargins(.top, 0, for: .scrollContent)

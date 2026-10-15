@@ -57,6 +57,7 @@ struct HomeView: View {
             .privacyPullToggle()
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
+            .contentMargins(.bottom, Space.lg, for: .scrollContent) // clear of the floating tab bar
             .sensoryFeedback(.selection, trigger: accountID)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .refreshable { await Account.refreshWatch(id: accountID) }

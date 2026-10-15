@@ -48,6 +48,7 @@ struct ProfileView: View {
             }
             .tint(Theme.textPrimary)
             .scrollContentBackground(.hidden)
+            .contentMargins(.bottom, Space.lg, for: .scrollContent) // clear of the floating tab bar
             .background(Theme.background)
             .toolbar(.hidden, for: .navigationBar)
             .sensoryFeedback(.selection, trigger: faceID)
