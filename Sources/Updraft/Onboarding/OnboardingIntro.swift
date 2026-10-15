@@ -1,5 +1,7 @@
 import SwiftUI
 import Charts
+import AuthenticationServices
+import _AuthenticationServices_SwiftUI
 
 // MARK: - Brand
 
@@ -391,6 +393,34 @@ struct PageDots: View {
 
 // MARK: - Get started
 
+/// Native Sign in with Apple button, visual only for now: tapping just
+/// continues onboarding (no request is made). Black in light mode, white in dark.
+private struct SignInWithAppleVisual: View {
+    let action: () -> Void
+    @Environment(\.colorScheme) private var scheme
+
+    var body: some View {
+        Button(action: action) {
+            SignInWithAppleButton(.continue, onRequest: { _ in }, onCompletion: { _ in })
+                .signInWithAppleButtonStyle(scheme == .dark ? .white : .black)
+                .allowsHitTesting(false)
+                .frame(height: 50)
+                .clipShape(.capsule)
+                .id(scheme) // the style is read once; rebuild on scheme change
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("Continue with Apple")
+    }
+}
+
+private struct PressScaleStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.snappy(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
 struct GetStartedView: View {
     let namespace: Namespace.ID
     let onStart: () -> Void
@@ -416,6 +446,7 @@ struct GetStartedView: View {
                 .staggered(1)
             Spacer()
             VStack(spacing: Space.xs) {
+                SignInWithAppleVisual { Haptics.tap(); onStart() }
                 Button {
                     Haptics.tap()
                     onStart()
