@@ -15,6 +15,20 @@ struct Quote: Sendable, Equatable {
 
 enum MarketStatus: Sendable, Equatable { case connecting, live, offline }
 
+/// One coin from CoinGecko's top-by-market-cap list.
+struct CatalogCoin: Sendable, Equatable, Identifiable {
+    let symbol: String
+    let name: String
+    let geckoID: String
+    let image: URL?
+    let price: Double
+    let change24h: Double
+    let marketCap: Double
+    /// Seven days of hourly prices, oldest first.
+    let sparkline: [Double]
+    var id: String { symbol }
+}
+
 /// Real market data without API keys:
 /// - Coinbase Exchange WebSocket `ticker` for live prices and 24h change,
 /// - Coinbase Exchange candles REST for chart history per timeframe,
@@ -33,6 +47,8 @@ final class MarketStore: @unchecked Sendable {
     private(set) var status: MarketStatus = .connecting
     /// True once any real price has arrived (socket or CoinGecko).
     private(set) var hasLoaded = false
+    /// Top ~100 coins by market cap (CoinGecko), refreshed every minute.
+    private(set) var catalog: [CatalogCoin] = []
     private var candleStore: [String: [PricePoint]] = [:]
     private var failedCandles: Set<String> = []
 
@@ -43,14 +59,13 @@ final class MarketStore: @unchecked Sendable {
     @ObservationIgnored private var flushTask: Task<Void, Never>?
     @ObservationIgnored private var lastGecko: Date = .distantPast
     @ObservationIgnored private var active = false
+    /// Symbols that have received a socket tick (their price comes from Coinbase).
+    @ObservationIgnored private var streamed: Set<String> = []
 
-    /// Our symbols to CoinGecko ids. Coinbase product ids are "<SYMBOL>-USD".
-    static let geckoIDs: [String: String] = [
-        "BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana", "XRP": "ripple",
-        "ADA": "cardano", "AVAX": "avalanche-2", "LINK": "chainlink", "DOT": "polkadot",
-    ]
+    /// Coins streamed over the socket (the original set; widened later).
+    private static let streamedSymbols = ["BTC", "ETH", "SOL", "XRP", "ADA", "AVAX", "LINK", "DOT"]
 
-    private static var symbols: [String] { geckoIDs.keys.sorted() }
+    private static var symbols: [String] { streamedSymbols }
 
     // MARK: Lifecycle
 
@@ -61,9 +76,13 @@ final class MarketStore: @unchecked Sendable {
         Task { await loadGeckoIfStale() }
         socketTask = Task { await runSocket() }
         flushTask = Task {
+            var tick = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(1))
                 flush()
+                tick += 1
+                // CoinGecko covers prices for coins not on the socket.
+                if tick % 60 == 0 { await loadGeckoIfStale() }
             }
         }
     }
@@ -152,43 +171,58 @@ final class MarketStore: @unchecked Sendable {
               let price = ticker.price.flatMap(Double.init) else { return }
         let symbol = String(product.split(separator: "-").first ?? "")
         pending[symbol] = Quote(price: price, open24h: ticker.open_24h.flatMap(Double.init), marketCap: nil)
+        streamed.insert(symbol)
         if status != .live { status = .live }
     }
 
     // MARK: CoinGecko
 
     private struct GeckoCoin: Decodable {
+        struct Sparkline: Decodable { let price: [Double] }
         let id: String
+        let symbol: String
+        let name: String
+        let image: String?
         let current_price: Double?
         let market_cap: Double?
         let price_change_percentage_24h: Double?
+        let sparkline_in_7d: Sparkline?
     }
 
-    /// Market caps for all coins, and prices for any coin the socket hasn't
-    /// covered yet. At most once a minute (free tier is rate limited).
+    /// Top 100 coins by market cap with names, logos, caps, 7d sparklines and
+    /// prices. Socket prices win for coins streaming over Coinbase.
+    /// At most once a minute (the free tier is rate limited).
     @MainActor private func loadGeckoIfStale() async {
-        guard Date.now.timeIntervalSince(lastGecko) > 60 else { return }
+        guard Date.now.timeIntervalSince(lastGecko) > 55 else { return }
         lastGecko = .now
-        let ids = Self.geckoIDs.values.sorted().joined(separator: ",")
-        guard let url = URL(string: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=\(ids)&price_change_percentage=24h"),
+        guard let url = URL(string: "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=true&price_change_percentage=24h"),
               let (data, response) = try? await URLSession.shared.data(from: url),
               (response as? HTTPURLResponse)?.statusCode == 200,
               let coins = try? JSONDecoder().decode([GeckoCoin].self, from: data) else { return }
-        let bySymbol = Dictionary(uniqueKeysWithValues: Self.geckoIDs.map { ($0.value, $0.key) })
+        var seen = Set<String>()
+        var list: [CatalogCoin] = []
         var next = quotes
         for coin in coins {
-            guard let symbol = bySymbol[coin.id] else { continue }
-            if var existing = next[symbol] {
+            let symbol = coin.symbol.uppercased()
+            guard let price = coin.current_price, seen.insert(symbol).inserted else { continue }
+            let change = coin.price_change_percentage_24h ?? 0
+            list.append(CatalogCoin(symbol: symbol, name: coin.name, geckoID: coin.id,
+                                    image: coin.image.flatMap(URL.init(string:)), price: price,
+                                    change24h: change, marketCap: coin.market_cap ?? 0,
+                                    sparkline: coin.sparkline_in_7d?.price ?? []))
+            if var existing = next[symbol], streamed.contains(symbol) {
                 existing.marketCap = coin.market_cap ?? existing.marketCap
                 next[symbol] = existing
-            } else if let price = coin.current_price {
-                let open = coin.price_change_percentage_24h.map { price / (1 + $0 / 100) }
-                next[symbol] = Quote(price: price, open24h: open, marketCap: coin.market_cap)
+            } else {
+                next[symbol] = Quote(price: price, open24h: price / (1 + change / 100), marketCap: coin.market_cap)
             }
         }
+        catalog = list
         quotes = next
         if !hasLoaded && !next.isEmpty { hasLoaded = true }
     }
+
+    func catalogCoin(_ symbol: String) -> CatalogCoin? { catalog.first { $0.symbol == symbol } }
 
     // MARK: Candles
 

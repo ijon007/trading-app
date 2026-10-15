@@ -20,6 +20,11 @@ struct Sparkline: Shape {
 extension Asset {
     /// Deterministic 24h sample series that ends in the direction of `change24h`.
     var sparkline: [Double] {
+        // Real 7 day prices from CoinGecko, thinned to ~42 points.
+        if let real = MarketStore.shared.catalogCoin(symbol)?.sparkline, real.count > 8 {
+            let step = max(1, real.count / 42)
+            return stride(from: 0, to: real.count, by: step).map { real[$0] } + [real[real.count - 1]]
+        }
         var seed = symbol.unicodeScalars.reduce(UInt64(7)) { $0 &* 31 &+ UInt64($1.value) }
         func next() -> Double {
             seed = seed &* 6364136223846793005 &+ 1442695040888963407

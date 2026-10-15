@@ -14,13 +14,19 @@ struct CoinIcon: View {
                 .scaledToFit()
                 .frame(width: size, height: size)
                 .clipShape(Circle())
+        } else if let url = MarketStore.shared.catalogCoin(symbol)?.image {
+            RemoteCoinImage(url: url, size: size) { monogram }
         } else {
-            Text(String(symbol.prefix(1)))
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: size, height: size)
-                .background(Theme.surfaceHi, in: Circle())
+            monogram
         }
+    }
+
+    private var monogram: some View {
+        Text(String(symbol.prefix(1)))
+            .font(.system(size: size * 0.42, weight: .semibold))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(width: size, height: size)
+            .background(Theme.surfaceHi, in: Circle())
     }
 }
 

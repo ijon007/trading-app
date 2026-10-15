@@ -32,11 +32,24 @@ enum SampleData {
     /// Coins at live prices (Coinbase/CoinGecko) when available, sample otherwise.
     /// Reading this inside a view body subscribes it to price updates.
     static var assets: [Asset] {
-        let quotes = MarketStore.shared.quotes
-        return baseAssets.map { a in
-            guard let q = quotes[a.id] else { return a }
-            return Asset(id: a.id, name: a.name, price: q.price, change24h: q.change24h, marketCap: q.marketCap ?? a.marketCap)
+        let market = MarketStore.shared
+        let quotes = market.quotes
+        var seen = Set<String>()
+        var list: [Asset] = []
+        // Top coins by market cap from CoinGecko, then any sample coin not in that list.
+        for coin in market.catalog where seen.insert(coin.symbol).inserted {
+            let base = baseAssets.first { $0.id == coin.symbol }
+            let quote = quotes[coin.symbol]
+            list.append(Asset(id: coin.symbol, name: base?.name ?? coin.name,
+                              price: quote?.price ?? coin.price,
+                              change24h: quote?.change24h ?? coin.change24h,
+                              marketCap: quote?.marketCap ?? coin.marketCap))
         }
+        for a in baseAssets where seen.insert(a.id).inserted {
+            guard let q = quotes[a.id] else { list.append(a); continue }
+            list.append(Asset(id: a.id, name: a.name, price: q.price, change24h: q.change24h, marketCap: q.marketCap ?? a.marketCap))
+        }
+        return list
     }
 
     static func asset(_ s: String) -> Asset { assets.first { $0.id == s } ?? baseAssets.first { $0.id == s }! }
