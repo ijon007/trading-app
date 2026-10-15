@@ -16,8 +16,8 @@ struct GlassTabItem<Value: Hashable>: Identifiable {
     }
 }
 
-/// Floating Liquid Glass tab bar with short capsule tabs. The selected tab sits in a
-/// glass capsule that morphs between tabs with a spring.
+/// Floating Liquid Glass tab bar with circular tabs. The selected tab sits in a
+/// glass circle that morphs between tabs with a spring.
 struct GlassTabBar<Value: Hashable>: View {
     @Binding var selection: Value
     let items: [GlassTabItem<Value>]
@@ -25,7 +25,7 @@ struct GlassTabBar<Value: Hashable>: View {
     @Namespace private var glass
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private let tabSize = CGSize(width: 68, height: 48)
+    private let tabSize: CGFloat = 50
 
     var body: some View {
         GlassEffectContainer(spacing: Space.xs) {
@@ -53,13 +53,13 @@ struct GlassTabBar<Value: Hashable>: View {
             item.icon
                 .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(selected ? Theme.accent : Theme.textSecondary)
-                .frame(width: tabSize.width, height: tabSize.height)
-                .contentShape(Capsule())
+                .frame(width: tabSize, height: tabSize)
+                .contentShape(Circle())
                 .background {
                     if selected {
-                        Capsule()
+                        Circle()
                             .fill(.clear)
-                            .glassEffect(.regular.tint(Theme.textPrimary.opacity(0.08)).interactive(), in: .capsule)
+                            .glassEffect(.regular.tint(Theme.textPrimary.opacity(0.08)).interactive(), in: .circle)
                             .glassEffectID("selection", in: glass)
                             .matchedGeometryEffect(id: "selection", in: glass)
                     }
