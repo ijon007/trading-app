@@ -15,6 +15,7 @@ struct RootView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: hasOnboarded)
+        .appLock()
         .task { MarketStore.shared.start() }
         // No socket in the background; reconnect on return.
         .onChange(of: scenePhase) { _, phase in
