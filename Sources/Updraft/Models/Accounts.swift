@@ -16,7 +16,7 @@ extension Account {
     static let storageKey = "account.current"
 
     /// Sample accounts. "Main" keeps the original sample portfolio.
-    static let all: [Account] = [
+    nonisolated(unsafe) static var all: [Account] = [
         Account(id: "main", name: "Main", symbol: "person.fill", holdings: [
             Holding(asset: SampleData.asset("BTC"), amount: 0.4821),
             Holding(asset: SampleData.asset("ETH"), amount: 6.25),

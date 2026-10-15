@@ -6,6 +6,7 @@ struct AccountSwitcher: View {
     @Binding var accountID: String
     /// Privacy mode (swe): balances in the menu show as dots while on.
     @AppStorage(PrivacyMode.storageKey) private var hideAmounts = false
+    @State private var addingAccount = false
 
     private var current: Account { Account.all.first { $0.id == accountID } ?? Account.all[0] }
 
@@ -21,6 +22,7 @@ struct AccountSwitcher: View {
                         Image(systemName: account.id == current.id ? "checkmark" : account.symbol)
                     }
                 }
+                Button { Haptics.tap(); addingAccount = true } label: { Text("Add account"); Image(systemName: "plus") }
             }
         } label: {
             HStack(spacing: Space.xs) {
@@ -39,6 +41,7 @@ struct AccountSwitcher: View {
             .glassEffect(.regular.interactive(), in: .capsule)
         }
         .menuOrder(.fixed)
+        .sheet(isPresented: $addingAccount) { AddAccountSheet { Account.all.append($0); select($0) } }
         .accessibilityLabel("Account, \(current.name)")
         .accessibilityHint("Switch account")
     }
