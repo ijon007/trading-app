@@ -3,7 +3,8 @@ import Observation
 
 /// UserDefaults keys for onboarding answers.
 enum OnboardingKeys {
-    static let done = "onboarding.done"
+    /// Versioned so a redesigned onboarding shows once more to existing users.
+    static let done = "onboarding.done.v2"
     static let name = "onboarding.name"
     static let email = "onboarding.email"
     static let experience = "onboarding.experience"
