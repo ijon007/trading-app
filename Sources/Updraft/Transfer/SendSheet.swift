@@ -136,9 +136,12 @@ struct SendSheet: View {
                 Text(inFiat ? (currency == .pln || currency == .chf ? currency.symbol : "") : asset.symbol)
                     .foregroundStyle(Theme.textSecondary)
             }
-            .numeral()
+            // One font for prefix, number and suffix. Text fields don't honor
+            // minimumScaleFactor, so long amounts step the shared size down instead.
+            .font(amountFont)
+            .tracking(Typo.numeralTracking)
             .lineLimit(1)
-            .minimumScaleFactor(0.5)
+            .animation(.snappy(duration: 0.2), value: amountFont)
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
             .onTapGesture { amountFocused = true }
@@ -175,6 +178,11 @@ struct SendSheet: View {
         }
         .padding(.vertical, Space.sm)
         .animation(.snappy, value: message)
+    }
+
+    private var amountFont: Font {
+        let size: CGFloat = amountText.count > 12 ? 24 : amountText.count > 8 ? 28 : 34
+        return .system(size: size, weight: .semibold).monospacedDigit()
     }
 
     private var message: String? {
