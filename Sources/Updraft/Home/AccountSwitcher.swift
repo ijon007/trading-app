@@ -7,6 +7,7 @@ struct AccountSwitcher: View {
     /// Privacy mode (swe): balances in the menu show as dots while on.
     @AppStorage(PrivacyMode.storageKey) private var hideAmounts = false
     @State private var addingAccount = false
+    @State private var managing = false
 
     private var current: Account { Account.all.first { $0.id == accountID } ?? Account.all[0] }
 
@@ -24,6 +25,7 @@ struct AccountSwitcher: View {
                 }
                 Button { Haptics.tap(); addingAccount = true } label: { Text("Add account"); Image(systemName: "plus") }
             }
+            Button { Haptics.tap(); managing = true } label: { Text("Manage accounts"); Image(systemName: "slider.horizontal.3") }
         } label: {
             HStack(spacing: Space.xs) {
                 AccountAvatar(account: current, size: 26)
@@ -42,6 +44,12 @@ struct AccountSwitcher: View {
         }
         .menuOrder(.fixed)
         .sheet(isPresented: $addingAccount) { AddAccountSheet { Account.add($0); select($0) } }
+        .sheet(isPresented: $managing) {
+            NavigationStack {
+                ManageAccountsView()
+                    .toolbar { ToolbarItem(placement: .topBarLeading) { Button("Done") { managing = false } } }
+            }
+        }
         .accessibilityLabel("Account, \(current.name)")
         .accessibilityHint("Switch account")
     }
@@ -53,17 +61,24 @@ struct AccountSwitcher: View {
     }
 }
 
-/// Round avatar with the account's symbol; inverts with the theme.
+/// Round avatar: the account's emoji or symbol on its color (default inverts with the theme).
 struct AccountAvatar: View {
     let account: Account
     var size: CGFloat = 26
 
     var body: some View {
-        Image(systemName: account.symbol)
-            .font(.system(size: size * 0.42, weight: .semibold))
-            .foregroundStyle(Theme.background)
-            .frame(width: size, height: size)
-            .background(Theme.textPrimary, in: .circle)
-            .contentTransition(.symbolEffect(.replace))
+        let tint = AccountPalette.color(account.color)
+        Group {
+            if let emoji = account.emoji {
+                Text(emoji).font(.system(size: size * 0.5))
+            } else {
+                Image(systemName: account.symbol)
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(tint == nil ? Theme.background : Color.white)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+        }
+        .frame(width: size, height: size)
+        .background(tint ?? (account.emoji == nil ? Theme.textPrimary : Theme.surfaceHi), in: .circle)
     }
 }

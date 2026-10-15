@@ -18,6 +18,7 @@ struct ProfileView: View {
                     row("Personal info", "person") { PersonalInfoView() }
                     row("Verification", "checkmark.seal") { VerificationView() }
                     row("Payment methods", "creditcard") { PaymentMethodsView() }
+                    row("Wallets", "wallet.bifold") { ManageAccountsView() }
                 }
                 Section("Security") {
                     FaceIDToggle()
