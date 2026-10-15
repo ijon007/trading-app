@@ -9,6 +9,9 @@ struct AccountsDrawer: View {
     @State private var adding = false
     @State private var deleting: Account?
     @State private var authFailed = false
+    /// Sheet fits its rows (capped at large), so there's no empty space below.
+    @State private var fittedHeight: CGFloat = 320
+    @State private var detent: PresentationDetent = .height(320)
 
     var body: some View {
         NavigationStack {
@@ -18,6 +21,7 @@ struct AccountsDrawer: View {
                         .buttonStyle(.plain)
                         .listRowBackground(Color.clear)
                         .listRowSeparatorTint(Theme.hairline)
+                        .listRowInsets(EdgeInsets(top: 10, leading: Space.md, bottom: 10, trailing: Space.md))
                         .swipeActions(edge: .trailing) {
                             if Account.all.count > 1 {
                                 Button("Delete", systemImage: "trash") { Haptics.warning(); deleting = account }
@@ -46,8 +50,20 @@ struct AccountsDrawer: View {
                 }
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 12, leading: Space.md, bottom: 12, trailing: Space.md))
             }
             .listStyle(.plain)
+            .environment(\.defaultMinListRowHeight, 0)
+            .contentMargins(.vertical, 0, for: .scrollContent)
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                (geo.contentSize.height + geo.contentInsets.top + geo.contentInsets.bottom).rounded()
+            } action: { _, h in
+                // Same as AddAccountSheet: follow content height while on the fitted detent.
+                guard h > 0, abs(h - fittedHeight) > 1 else { return }
+                let follow = detent == .height(fittedHeight)
+                fittedHeight = h
+                if follow { withAnimation(.smooth(duration: 0.3)) { detent = .height(h) } }
+            }
             .scrollContentBackground(.hidden)
             .animation(.snappy, value: Account.all.map(\.id))
             .navigationTitle("Accounts")
@@ -61,7 +77,7 @@ struct AccountsDrawer: View {
                      : "Make sure you've backed up your 12 words. Without them, this account can't be restored.")
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.height(fittedHeight), .large], selection: $detent)
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $adding) {
             AddAccountSheet { account in
@@ -97,7 +113,6 @@ struct AccountsDrawer: View {
                 .foregroundStyle(Theme.textPrimary)
                 .opacity(account.id == accountID ? 1 : 0)
         }
-        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(account.id == accountID ? .isSelected : [])
