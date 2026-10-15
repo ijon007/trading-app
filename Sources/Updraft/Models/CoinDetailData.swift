@@ -66,8 +66,14 @@ extension Asset {
         return (rng.next() - 0.5 + bias) * scale
     }
 
+    /// Price series for a timeframe, generated once and cached for a minute,
+    /// so charts can read it on every render (and every scrub tick) for free.
+    func series(_ timeframe: Timeframe) -> [PricePoint] {
+        SeriesCache.shared.value(for: "\(symbol)|\(timeframe.rawValue)") { makeSeries(timeframe) }
+    }
+
     /// Deterministic random walk ending at the current price.
-    func series(_ timeframe: Timeframe, now: Date = .now) -> [PricePoint] {
+    private func makeSeries(_ timeframe: Timeframe, now: Date = .now) -> [PricePoint] {
         var rng = SeededRandom(symbol + timeframe.rawValue)
         let n = timeframe.pointCount
         var walk = [0.0]
@@ -95,5 +101,21 @@ extension Asset {
             allTimeHigh: price * (1.05 + rng.next() * 0.9),
             rank: rank
         )
+    }
+}
+
+/// Small time-limited cache for generated sample series.
+final class SeriesCache: @unchecked Sendable {
+    static let shared = SeriesCache()
+    private let lock = NSLock()
+    private var store: [String: (made: Date, points: [PricePoint])] = [:]
+    private let lifetime: TimeInterval = 60
+
+    func value(for key: String, make: () -> [PricePoint]) -> [PricePoint] {
+        lock.lock(); defer { lock.unlock() }
+        if let hit = store[key], Date.now.timeIntervalSince(hit.made) < lifetime { return hit.points }
+        let points = make()
+        store[key] = (.now, points)
+        return points
     }
 }

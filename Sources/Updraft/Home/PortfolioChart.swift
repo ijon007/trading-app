@@ -3,35 +3,32 @@ import Charts
 
 /// Home header: total balance, change for the timeframe, an edge-to-edge
 /// balance chart with scrubbing, and the timeframe switcher.
+///
+/// Performance: the series is cached, the drag position lives inside
+/// `ScrubbableChart`, and this view only hears about it when the nearest
+/// point index changes, so a drag doesn't rebuild the header on every tick.
 struct PortfolioHeader: View {
     @State private var timeframe: Timeframe = .day
-    @State private var selectedDate: Date?
+    @State private var selectedIndex: Int?
 
     private var points: [PricePoint] { SampleData.balanceSeries(timeframe) }
-    private var startValue: Double { points.first?.price ?? SampleData.totalBalance }
-    private var endValue: Double { points.last?.price ?? SampleData.totalBalance }
-
-    private var selected: PricePoint? {
-        guard let selectedDate else { return nil }
-        return points.min { abs($0.date.timeIntervalSince(selectedDate)) < abs($1.date.timeIntervalSince(selectedDate)) }
-    }
-
-    /// Value shown in the big number: the scrubbed point or the live total.
-    private var shown: Double { selected?.price ?? endValue }
-    private var delta: Double { shown - startValue }
-    private var deltaPercent: Double { startValue > 0 ? delta / startValue * 100 : 0 }
-    /// Line color follows the whole timeframe, not the scrub position.
-    private var tint: Color { endValue >= startValue ? Theme.positive : Theme.negative }
-    private var deltaTint: Color { delta >= 0 ? Theme.positive : Theme.negative }
 
     var body: some View {
+        let points = points
+        let start = points.first?.price ?? SampleData.totalBalance
+        let end = points.last?.price ?? SampleData.totalBalance
+        let selected = selectedIndex.flatMap { points.indices.contains($0) ? points[$0] : nil }
+        let tint = end >= start ? Theme.positive : Theme.negative
+
         VStack(spacing: Space.md) {
-            summary
+            BalanceSummary(value: selected?.price ?? end, start: start,
+                           date: selected?.date, timeframe: timeframe)
             ZStack {
-                chart
+                ScrubbableChart(points: points, tint: tint, selectedIndex: $selectedIndex)
                     .id(timeframe) // fresh chart per timeframe: no marks interpolating between series
                     .transition(.opacity)
             }
+            .frame(height: 180)
             Picker("Timeframe", selection: $timeframe.animation(.easeInOut(duration: 0.2))) {
                 ForEach(Timeframe.allCases) { Text($0.rawValue).tag($0) }
             }
@@ -39,21 +36,29 @@ struct PortfolioHeader: View {
             .padding(.horizontal, Space.md)
         }
         .sensoryFeedback(.selection, trigger: timeframe)
-        .sensoryFeedback(.selection, trigger: selected?.date) { _, new in new != nil }
-        .onChange(of: timeframe) { selectedDate = nil }
+        .sensoryFeedback(.selection, trigger: selectedIndex) { _, new in new != nil }
+        .onChange(of: timeframe) { selectedIndex = nil }
     }
+}
 
-    // MARK: Summary
+/// Big balance number and the change line; rolls digits on index changes only.
+private struct BalanceSummary: View {
+    let value: Double
+    let start: Double
+    let date: Date?
+    let timeframe: Timeframe
 
-    private var summary: some View {
+    var body: some View {
+        let delta = value - start
+        let percent = start > 0 ? delta / start * 100 : 0
         VStack(spacing: Space.xs) {
             Text("Total balance")
                 .font(Typo.callout)
                 .foregroundStyle(Theme.textSecondary)
-            Text(shown.fiat)
+            Text(value.fiat)
                 .heroNumeral()
                 .foregroundStyle(Theme.textPrimary)
-                .contentTransition(.numericText(value: shown))
+                .contentTransition(.numericText(value: value))
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
                 .padding(.horizontal, Space.md)
@@ -62,11 +67,11 @@ struct PortfolioHeader: View {
                     .font(.system(size: 9))
                 Text((delta >= 0 ? "+" : "−") + abs(delta).fiat)
                     .contentTransition(.numericText(value: delta))
-                Text("(\(deltaPercent.percent))")
-                    .contentTransition(.numericText(value: deltaPercent))
+                Text("(\(percent.percent))")
+                    .contentTransition(.numericText(value: percent))
                 Group {
-                    if let selected {
-                        Text(selected.date, format: dateFormat)
+                    if let date {
+                        Text(date, format: dateFormat)
                     } else {
                         Text(timeframe == .all ? "all time" : "past \(timeframe.rawValue)")
                     }
@@ -74,12 +79,12 @@ struct PortfolioHeader: View {
                 .foregroundStyle(Theme.textTertiary)
             }
             .font(Typo.figure)
-            .foregroundStyle(deltaTint)
+            .foregroundStyle(delta >= 0 ? Theme.positive : Theme.negative)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
         }
         // Short and snappy so scrubbing keeps up with the finger.
-        .animation(.snappy(duration: 0.18), value: shown)
+        .animation(.snappy(duration: 0.15), value: value)
         .accessibilityElement(children: .combine)
     }
 
@@ -90,43 +95,104 @@ struct PortfolioHeader: View {
         case .year, .all: .dateTime.month(.abbreviated).day().year()
         }
     }
+}
 
-    // MARK: Chart
+/// Owns the raw drag position. The heavy plot is an Equatable view that only
+/// redraws when the data or color changes; the indicator is a light overlay.
+private struct ScrubbableChart: View {
+    let points: [PricePoint]
+    let tint: Color
+    @Binding var selectedIndex: Int?
+    @State private var selectedDate: Date?
 
-    private var chart: some View {
+    var body: some View {
         let values = points.map(\.price)
         let lo = values.min() ?? 0, hi = values.max() ?? 1
         let pad = max((hi - lo) * 0.1, 1)
-        let floor = lo - pad
-        return Chart {
-            ForEach(points) { point in
-                AreaMark(x: .value("Date", point.date),
-                         yStart: .value("Base", floor),
-                         yEnd: .value("Balance", point.price))
-                    .interpolationMethod(.monotone)
-                    .foregroundStyle(LinearGradient(colors: [tint.opacity(0.22), tint.opacity(0)],
-                                                    startPoint: .top, endPoint: .bottom))
-                LineMark(x: .value("Date", point.date), y: .value("Balance", point.price))
-                    .interpolationMethod(.monotone)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(tint)
+        let domain = (lo - pad)...(hi + pad)
+
+        PortfolioPlot(points: points, tint: tint, domain: domain, selection: $selectedDate)
+            .equatable()
+            .overlay {
+                if let i = selectedIndex, points.indices.contains(i) {
+                    ScrubIndicator(index: i, count: points.count, value: points[i].price,
+                                   domain: domain, tint: tint)
+                        .allowsHitTesting(false)
+                }
             }
-            if let selected {
-                RuleMark(x: .value("Selected", selected.date))
-                    .foregroundStyle(Theme.textTertiary)
-                    .lineStyle(StrokeStyle(lineWidth: 1))
-                PointMark(x: .value("Date", selected.date), y: .value("Balance", selected.price))
-                    .foregroundStyle(tint)
-                    .symbolSize(60)
+            .onChange(of: selectedDate) { _, date in
+                let index = date.map(nearestIndex)
+                if index != selectedIndex { selectedIndex = index }
             }
+    }
+
+    /// Points are evenly spaced in time, so the nearest index is O(1).
+    private func nearestIndex(_ date: Date) -> Int {
+        guard let first = points.first?.date, let last = points.last?.date, points.count > 1 else { return 0 }
+        let t = date.timeIntervalSince(first) / last.timeIntervalSince(first)
+        return min(max(Int((t * Double(points.count - 1)).rounded()), 0), points.count - 1)
+    }
+}
+
+/// Line + gradient area. Skipped on re-render unless points/color/domain change.
+private struct PortfolioPlot: View, Equatable {
+    let points: [PricePoint]
+    let tint: Color
+    let domain: ClosedRange<Double>
+    @Binding var selection: Date?
+
+    nonisolated static func == (a: Self, b: Self) -> Bool {
+        a.points == b.points && a.tint == b.tint && a.domain == b.domain
+    }
+
+    var body: some View {
+        Chart(points) { point in
+            AreaMark(x: .value("Date", point.date),
+                     yStart: .value("Base", domain.lowerBound),
+                     yEnd: .value("Balance", point.price))
+                .interpolationMethod(.monotone)
+                .foregroundStyle(LinearGradient(colors: [tint.opacity(0.22), tint.opacity(0)],
+                                                startPoint: .top, endPoint: .bottom))
+            LineMark(x: .value("Date", point.date), y: .value("Balance", point.price))
+                .interpolationMethod(.monotone)
+                .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                .foregroundStyle(tint)
         }
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
         .chartLegend(.hidden)
-        .chartYScale(domain: floor...(hi + pad))
+        .chartYScale(domain: domain)
         .chartPlotStyle { $0.padding(.zero) }
-        .chartXSelection(value: $selectedDate)
-        .frame(height: 180)
-        .accessibilityLabel("Portfolio balance chart, \(timeframe.rawValue)")
+        .chartXSelection(value: $selection)
+        .drawingGroup()
+        .accessibilityLabel("Portfolio balance chart")
+    }
+}
+
+/// Vertical rule and dot at the selected point, positioned by index.
+private struct ScrubIndicator: View {
+    let index: Int
+    let count: Int
+    let value: Double
+    let domain: ClosedRange<Double>
+    let tint: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            let x = count > 1 ? geo.size.width * CGFloat(index) / CGFloat(count - 1) : 0
+            let span = domain.upperBound - domain.lowerBound
+            let y = geo.size.height * (1 - CGFloat((value - domain.lowerBound) / (span > 0 ? span : 1)))
+            ZStack(alignment: .topLeading) {
+                Rectangle()
+                    .fill(Theme.textTertiary)
+                    .frame(width: 1, height: geo.size.height)
+                    .offset(x: x - 0.5)
+                Circle()
+                    .fill(tint)
+                    .overlay(Circle().strokeBorder(Theme.background, lineWidth: 2))
+                    .frame(width: 10, height: 10)
+                    .offset(x: x - 5, y: y - 5)
+            }
+        }
     }
 }
