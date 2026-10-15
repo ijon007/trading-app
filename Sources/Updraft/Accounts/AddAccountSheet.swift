@@ -7,7 +7,7 @@ struct AddAccountSheet: View {
     let onAdd: (Account) -> Void
 
     private enum Mode: String, CaseIterable, Identifiable {
-        case create = "Create new", importWallet = "Import"
+        case create = "Create new", importWallet = "Import", watch = "Watch"
         var id: String { rawValue }
     }
 
@@ -24,6 +24,9 @@ struct AddAccountSheet: View {
     @State private var symbol = AddAccountSheet.symbols
         .first { s in !Account.all.contains { $0.symbol == s } } ?? "person.fill"
     @State private var secret = ""
+    @State private var address = ""
+    /// Last name we filled in from the address; replaced only while the user hasn't edited it.
+    @State private var autoName: String?
     @FocusState private var focused: Bool
     /// Content height (plus nav bar and button insets), so the sheet opens fitted.
     @State private var fittedHeight: CGFloat = 520
@@ -32,7 +35,12 @@ struct AddAccountSheet: View {
     private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var secretKind: SecretKind { SecretKind(secret) }
     private var canSubmit: Bool {
-        !trimmedName.isEmpty && (mode == .create || secretKind.isValid)
+        guard !trimmedName.isEmpty else { return false }
+        switch mode {
+        case .create: return true
+        case .importWallet: return secretKind.isValid
+        case .watch: return WatchAddress.isValid(address)
+        }
     }
 
     var body: some View {
@@ -44,6 +52,11 @@ struct AddAccountSheet: View {
                     }
                     .pickerStyle(.segmented)
 
+                    if mode == .watch {
+                        watchFields
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
+
                     field("Name") {
                         TextField("Account name", text: $name)
                             .font(Typo.body)
@@ -54,10 +67,12 @@ struct AddAccountSheet: View {
                             .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
                     }
 
-                    field("Icon") {
-                        symbolGrid
-                            .padding(Space.md)
-                            .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
+                    if mode != .watch {
+                        field("Icon") {
+                            symbolGrid
+                                .padding(Space.md)
+                                .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
+                        }
                     }
 
                     if mode == .importWallet {
@@ -112,6 +127,61 @@ struct AddAccountSheet: View {
         .presentationDragIndicator(.visible)
     }
 
+    private var watchFields: some View {
+        let trimmed = WatchAddress.trimmed(address)
+        let valid = WatchAddress.isValid(address)
+        return VStack(alignment: .leading, spacing: Space.md) {
+            field("Address") {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(spacing: Space.xs) {
+                        TextField("0x…", text: $address)
+                            .font(Typo.body.monospaced())
+                            .foregroundStyle(Theme.textPrimary)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .keyboardType(.asciiCapable)
+                            .submitLabel(.done)
+                            .focused($focused)
+                        PasteButton(payloadType: String.self) { strings in
+                            let text = strings.first ?? ""
+                            Task { @MainActor in address = text }
+                        }
+                        .labelStyle(.titleOnly)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.small)
+                        .tint(Theme.textPrimary)
+                    }
+                    .padding(.leading, Space.md)
+                    .padding(.trailing, Space.sm)
+                    .padding(.vertical, Space.sm)
+                    .background(Theme.surface, in: .rect(cornerRadius: Radius.md))
+                    Label(WatchAddress.hint(address), systemImage: valid ? "checkmark.circle.fill" : "info.circle")
+                        .font(Typo.caption)
+                        .foregroundStyle(valid ? Theme.positive : (trimmed.isEmpty ? Theme.textSecondary : Theme.negative))
+                        .contentTransition(.interpolate)
+                        .animation(.smooth(duration: 0.2), value: valid)
+                }
+            }
+            HStack(spacing: Space.xs) {
+                Image(systemName: "eye")
+                    .font(Typo.callout)
+                    .foregroundStyle(Theme.textSecondary)
+                Text("View only. You can't send from this account.")
+                    .font(Typo.callout)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .onChange(of: address) { _, new in
+            guard WatchAddress.isValid(new) else { return }
+            let short = WatchAddress.short(new)
+            // Prefill the name unless the user typed their own.
+            if autoName == trimmedName || name == "Account \(Account.all.count + 1)" {
+                name = short
+                autoName = short
+            }
+        }
+    }
+
     /// Section label above a surface card, as in the other Updraft sheets.
     private func field<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: Space.xs) {
@@ -146,7 +216,7 @@ struct AddAccountSheet: View {
         Button {
             submit()
         } label: {
-            Text(mode == .create ? "Create" : "Import")
+            Text(mode == .create ? "Create" : mode == .importWallet ? "Import" : "Add")
                 .font(Typo.headline)
                 .frame(maxWidth: .infinity)
         }
@@ -160,7 +230,12 @@ struct AddAccountSheet: View {
     private func submit() {
         guard canSubmit else { Haptics.error(); return }
         focused = false
-        let account = Account(id: UUID().uuidString, name: trimmedName, symbol: symbol, holdings: [])
+        // TODO(accounts): once Account has `isWatchOnly` and `address`, pass them here
+        // (from `watch`) and let the data layer fetch the balance. Until then the
+        // watched address only lives in this local value.
+        let watch = mode == .watch ? WatchAddress(address: WatchAddress.trimmed(address)) : nil
+        let account = Account(id: watch.map { "watch-" + $0.address.lowercased() } ?? UUID().uuidString,
+                              name: trimmedName, symbol: watch == nil ? symbol : "eye.fill", holdings: [])
         Haptics.success()
         onAdd(account)
         dismiss()
@@ -200,5 +275,35 @@ private enum SecretKind {
         case .phrase(let n): "\(n) word\(n == 1 ? "" : "s"). Recovery phrases have 12 or 24 words."
         case .invalid: "That doesn't look like a recovery phrase or private key."
         }
+    }
+}
+
+/// Watch-only target (placeholder until Account carries `isWatchOnly`/`address`).
+struct WatchAddress: Hashable, Sendable {
+    let address: String
+    var isWatchOnly: Bool { true }
+
+    static func trimmed(_ raw: String) -> String { raw.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    /// Ethereum address: 0x plus 40 hex characters.
+    static func isValid(_ raw: String) -> Bool {
+        let t = trimmed(raw)
+        guard t.count == 42, t.lowercased().hasPrefix("0x") else { return false }
+        return t.dropFirst(2).allSatisfy(\.isHexDigit)
+    }
+
+    static func short(_ raw: String) -> String {
+        let t = trimmed(raw)
+        return String(t.prefix(6)) + "…" + String(t.suffix(4))
+    }
+
+    static func hint(_ raw: String) -> String {
+        let t = trimmed(raw)
+        if t.isEmpty { return "Paste an Ethereum address that starts with 0x." }
+        if isValid(t) { return "Valid Ethereum address." }
+        if !t.lowercased().hasPrefix("0x") { return "Addresses start with 0x." }
+        let body = t.dropFirst(2)
+        if !body.allSatisfy(\.isHexDigit) { return "Only 0–9 and a–f after 0x." }
+        return "\(body.count) of 40 characters after 0x."
     }
 }
