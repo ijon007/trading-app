@@ -12,7 +12,6 @@ struct AccountsDrawer: View {
     /// Sheet fits its rows (capped at large), so there's no empty space below.
     @State private var fittedHeight: CGFloat = 320
     @State private var detent: PresentationDetent = .height(320)
-    @Namespace private var selection
 
     var body: some View {
         NavigationStack {
@@ -20,7 +19,7 @@ struct AccountsDrawer: View {
                 ForEach(Account.all) { account in
                     Button { select(account) } label: { row(account) }
                         .buttonStyle(.plain)
-                        .listRowBackground(highlight(account.id == accountID))
+                        .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 10, leading: Space.md, bottom: 10, trailing: Space.md))
                         .swipeActions(edge: .trailing) {
@@ -94,8 +93,19 @@ struct AccountsDrawer: View {
     private var deleteTitle: String { "Delete \(deleting?.name ?? "account")?" }
 
     private func row(_ account: Account) -> some View {
-        HStack(spacing: Space.sm) {
+        let selected = account.id == accountID
+        return HStack(spacing: Space.sm) {
             AccountAvatar(account: account, size: 38)
+                // Selected: a thin ring with a small gap, springing in on switch.
+                .overlay {
+                    Circle()
+                        .strokeBorder(Theme.accent, lineWidth: 2)
+                        .padding(-5)
+                        .scaleEffect(selected ? 1 : 0.85)
+                        .opacity(selected ? 1 : 0)
+                        .animation(.spring(duration: 0.35, bounce: 0.3), value: selected)
+                }
+                .padding(.horizontal, 3)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: Space.xxs) {
                     Text(account.name).font(Typo.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
@@ -116,20 +126,6 @@ struct AccountsDrawer: View {
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(account.id == accountID ? .isSelected : [])
-    }
-
-    /// Soft rounded highlight behind the selected row; slides between rows on switch.
-    @ViewBuilder
-    private func highlight(_ selected: Bool) -> some View {
-        if selected {
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.primary.opacity(0.06))
-                .padding(.horizontal, Space.xs)
-                .padding(.vertical, 2)
-                .matchedGeometryEffect(id: "selected", in: selection)
-        } else {
-            Color.clear
-        }
     }
 
     private func select(_ account: Account) {
