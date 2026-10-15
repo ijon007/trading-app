@@ -4,6 +4,8 @@ import SwiftUI
 /// opening a native menu of accounts with their balances.
 struct AccountSwitcher: View {
     @Binding var accountID: String
+    /// Privacy mode (swe): balances in the menu show as dots while on.
+    @AppStorage(PrivacyMode.storageKey) private var hideAmounts = false
 
     private var current: Account { Account.all.first { $0.id == accountID } ?? Account.all[0] }
 
@@ -15,7 +17,7 @@ struct AccountSwitcher: View {
                         select(account)
                     } label: {
                         Text(account.name)
-                        Text(account.totalBalance.fiat)
+                        Text(hideAmounts ? "••••" : account.totalBalance.fiat)
                         Image(systemName: account.id == current.id ? "checkmark" : account.symbol)
                     }
                 }
