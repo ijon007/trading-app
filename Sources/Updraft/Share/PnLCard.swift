@@ -42,9 +42,14 @@ struct PnLCard: View {
                     Text(summary.label).font(Typo.caption).foregroundStyle(Theme.textSecondary)
                 }
                 Spacer()
-                Label("Updraft", systemImage: "wind")
-                    .font(Typo.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                HStack(spacing: Space.xxs) {
+                    UpdraftLogoShape()
+                        .frame(width: 12, height: 16)
+                    Text("Updraft").font(Typo.caption)
+                }
+                .foregroundStyle(Theme.textTertiary)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Updraft")
             }
             VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(hideAmounts ? summary.percent.percent : signed(summary.amount))
@@ -77,4 +82,28 @@ struct PnLCard: View {
     }
 
     private func signed(_ v: Double) -> String { (v >= 0 ? "+" : "−") + abs(v).fiat }
+}
+
+/// The Updraft mark: two rising, softly cornered bands, traced from the app icon
+/// (Resources/AppIcon.png) without its square, so it tints with the foreground style.
+struct UpdraftLogoShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        // Source geometry, in app-icon pixels: the mark spans x 292...732, y 215...808.
+        let minX: CGFloat = 292, minY: CGFloat = 215, w: CGFloat = 440, h: CGFloat = 593
+        let s = min(rect.width / w, rect.height / h)
+        let ox = rect.midX - w * s / 2, oy = rect.midY - h * s / 2
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: ox + (x - minX) * s, y: oy + (y - minY) * s) }
+
+        var path = Path()
+        for dy: CGFloat in [0, 215] {
+            path.move(to: p(292, 593 + dy))
+            path.addLine(to: p(292, 490 + dy))
+            path.addQuadCurve(to: p(345, 416 + dy), control: p(292, 443 + dy))
+            path.addLine(to: p(732, 215 + dy))
+            path.addLine(to: p(732, 318 + dy))
+            path.addQuadCurve(to: p(679, 392 + dy), control: p(732, 364 + dy))
+            path.closeSubpath()
+        }
+        return path
+    }
 }

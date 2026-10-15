@@ -8,7 +8,7 @@ struct PnLShareSheet: View {
     @AppStorage(PrivacyMode.storageKey) private var privacyOn = false
     @Environment(\.colorScheme) private var systemScheme
     @Environment(\.displayScale) private var displayScale
-    @State private var timeframe: Timeframe = .all
+    @State private var timeframe: Timeframe = .day
     @State private var style: Appearance = .dark
     @State private var hideAmounts = false
     @State private var image: Image?
