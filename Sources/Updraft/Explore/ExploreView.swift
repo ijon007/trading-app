@@ -33,7 +33,7 @@ struct ExploreView: View {
                 if query.isEmpty {
                     // Plain row, not a Section header, so it scrolls away instead of pinning.
                     sectionTitle("Top gainers")
-                        .listRowInsets(EdgeInsets(top: 0, leading: Space.md, bottom: 0, trailing: Space.md))
+                        .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.md, bottom: 0, trailing: Space.md))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
                     gainersRow
@@ -45,7 +45,7 @@ struct ExploreView: View {
                         ForEach(Filter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    .listRowInsets(EdgeInsets(top: Space.md, leading: Space.md, bottom: Space.xs, trailing: Space.md))
+                    .listRowInsets(EdgeInsets(top: Space.xxs, leading: Space.md, bottom: Space.xs, trailing: Space.md))
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
@@ -63,7 +63,10 @@ struct ExploreView: View {
             .environment(\.defaultMinListRowHeight, 0)
             .id(currency) // rows hold plain values; rebuild them on currency change
             .scrollContentBackground(.hidden)
+            // Even rhythm: search → Top gainers (8) → cards (12, also the shadow room)
+            // → filter (16) → list. No extra top margin or section spacing.
             .contentMargins(.top, 0, for: .scrollContent)
+            .listSectionSpacing(.compact)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
             .navigationTitle("Explore")
@@ -107,7 +110,7 @@ struct GainersMarquee: View {
             }
             .scrollIndicators(.hidden)
             .scrollClipDisabled()
-            .padding(.vertical, Space.md)
+            .padding(.vertical, Space.sm)
         } else {
             TimelineView(.animation(paused: pauseStart != nil || period == 0)) { context in
                 HStack(spacing: 0) {
@@ -125,8 +128,8 @@ struct GainersMarquee: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             // Room above and below for the glass shadow; no clipping, so it fades out naturally.
-            .padding(.vertical, Space.md)
-            .frame(height: GainerCard.height + Space.md * 2)
+            .padding(.vertical, Space.sm)
+            .frame(height: GainerCard.height + Space.sm * 2)
             .contentShape(.rect)
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
