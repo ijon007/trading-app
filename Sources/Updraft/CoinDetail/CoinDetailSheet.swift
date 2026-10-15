@@ -66,12 +66,32 @@ struct CoinDetailSheet: View {
 
     private var displayedPrice: Double { selected?.price ?? asset.price }
 
+    private var starButton: some View {
+        let starred = Watchlist.shared.contains(asset.id)
+        return Button {
+            Haptics.tap()
+            withAnimation(.snappy) { Watchlist.shared.toggle(asset.id) }
+        } label: {
+            Image(systemName: starred ? "star.fill" : "star")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(starred ? Color.yellow : Theme.textSecondary)
+                .contentTransition(.symbolEffect(.replace))
+                .symbolEffect(.bounce, value: starred)
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(starred ? "Remove from watchlist" : "Add to watchlist")
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             HStack(spacing: Space.xs) {
                 CoinIcon(symbol: asset.symbol, size: 28)
                 Text(asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                 Text(asset.symbol).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+                Spacer()
+                starButton
             }
             Text(displayedPrice.fiat)
                 .numeral()
