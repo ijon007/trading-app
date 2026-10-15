@@ -23,20 +23,12 @@ struct RootView: View {
     }
 
     private var tabs: some View {
-        // Custom glass bar (Components/GlassTabBar.swift); pages stay alive in the ZStack.
-        ZStack {
-            HomeView().glassTabPage(tab == .home)
-            ExploreView().glassTabPage(tab == .explore)
-            ProfileView().glassTabPage(tab == .profile)
+        TabView(selection: $tab) {
+            Tab(value: AppTab.home) { HomeView() } label: { Label { Text("Home") } icon: { Image(uiImage: UpdraftTabIcon.image) }.labelStyle(.iconOnly).accessibilityLabel("Home") }
+            Tab(value: AppTab.explore) { ExploreView() } label: { icon("safari.fill", "Explore") }
+            Tab(value: AppTab.profile) { ProfileView() } label: { icon("person.crop.circle.fill", "Profile") }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            GlassTabBar(selection: $tab, items: [
-                GlassTabItem(AppTab.home, "Home", image: Image(uiImage: UpdraftTabIcon.image)),
-                GlassTabItem(AppTab.explore, "Explore", systemImage: "safari.fill"),
-                GlassTabItem(AppTab.profile, "Profile", systemImage: "person.crop.circle.fill"),
-            ])
-        }
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        .sensoryFeedback(.selection, trigger: tab)
         .privacyFlipToHide()
     }
 
