@@ -7,7 +7,42 @@ struct SendDraft: Hashable {
     let address: String
     let amount: Double  // asset units
     let fee: Double     // USD
+    /// ENS name the address was resolved from, if any.
+    var ensName: String? = nil
+    /// First send to this address (shows a warning on review).
+    var isNewRecipient = true
     var value: Double { amount * asset.price }
+}
+
+/// Addresses sent to before, so review can flag a new one.
+enum SendRecipients {
+    private static let key = "send.recipients.v1"
+    static func isKnown(_ address: String) -> Bool {
+        (UserDefaults.standard.stringArray(forKey: key) ?? []).contains(address.lowercased())
+    }
+    static func remember(_ address: String) {
+        var list = UserDefaults.standard.stringArray(forKey: key) ?? []
+        guard !list.contains(address.lowercased()) else { return }
+        list.append(address.lowercased())
+        UserDefaults.standard.set(list, forKey: key)
+    }
+}
+
+/// Small "Sepolia test network" title, shown on the send screens.
+struct TestNetworkTitle: View {
+    let title: String
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(title).font(Typo.headline).foregroundStyle(Theme.textPrimary)
+            HStack(spacing: 4) {
+                Circle().fill(Color.orange).frame(width: 5, height: 5)
+                Text("Sepolia test network")
+            }
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(Theme.textTertiary)
+        }
+        .accessibilityElement(children: .combine)
+    }
 }
 
 /// Send drawer: asset, recipient, amount, fee, then review.
@@ -19,6 +54,9 @@ struct SendSheet: View {
     @State private var amountText = ""
     @State private var inFiat = false
     @State private var review: SendDraft?
+    /// Looking up an ENS recipient, and the last failure.
+    @State private var resolving = false
+    @State private var resolveError: String?
     @FocusState private var amountFocused: Bool
 
     private var asset: Asset { holding.asset }
@@ -31,12 +69,16 @@ struct SendSheet: View {
     private var fee: Double { asset.networkFee(on: network) }
 
     private var trimmedAddress: String { address.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var isENS: Bool {
+        let t = trimmedAddress.lowercased()
+        return t.hasSuffix(".eth") && t.count > 4 && !t.contains(" ")
+    }
 
     private enum Issue { case noAddress, badAddress, noAmount, insufficient }
     private var issue: Issue? {
         if amount > holding.amount + 1e-12 { return .insufficient }
         if trimmedAddress.isEmpty { return .noAddress }
-        if trimmedAddress.count < 26 { return .badAddress }
+        if !isENS, trimmedAddress.count < 26 { return .badAddress }
         if amount <= 0 { return .noAmount }
         return nil
     }
@@ -67,6 +109,7 @@ struct SendSheet: View {
             .navigationTitle("Send")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) { TestNetworkTitle(title: "Send") }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close", systemImage: "xmark") { dismiss() }
                 }
@@ -92,7 +135,7 @@ struct SendSheet: View {
         VStack(alignment: .leading, spacing: Space.xs) {
             Text("To").font(Typo.caption).foregroundStyle(Theme.textSecondary)
             HStack(alignment: .center, spacing: Space.xs) {
-                TextField("\(asset.symbol) address", text: $address, axis: .vertical)
+                TextField("0x… or name.eth", text: $address, axis: .vertical)
                     .font(.system(size: 15, weight: .medium, design: .monospaced))
                     .foregroundStyle(Theme.textPrimary)
                     .textInputAutocapitalization(.never)
@@ -118,6 +161,17 @@ struct SendSheet: View {
             }
         }
         .transferCard()
+        .overlay(alignment: .bottomLeading) {
+            if let resolveError {
+                Text(resolveError)
+                    .font(Typo.caption)
+                    .foregroundStyle(Theme.negative)
+                    .offset(y: 20)
+                    .transition(.opacity)
+            }
+        }
+        .onChange(of: address) { resolveError = nil }
+        .animation(.smooth(duration: 0.2), value: resolveError)
     }
 
     // MARK: Amount
@@ -228,16 +282,42 @@ struct SendSheet: View {
         Button {
             Haptics.tap()
             amountFocused = false
-            review = SendDraft(asset: asset, network: network, address: trimmedAddress, amount: amount, fee: fee)
+            startReview()
         } label: {
-            Text(issue == .noAddress ? "Enter an address" : issue == .noAmount ? "Enter an amount" : "Review")
-                .font(Typo.headline)
-                .frame(maxWidth: .infinity)
+            ZStack {
+                Text(issue == .noAddress ? "Enter an address" : issue == .noAmount ? "Enter an amount" : "Review")
+                    .opacity(resolving ? 0 : 1)
+                if resolving { ProgressView().tint(Theme.background) }
+            }
+            .font(Typo.headline)
+            .frame(maxWidth: .infinity)
         }
         .glassProminentButton()
         .controlSize(.large)
-        .disabled(issue != nil)
+        .disabled(issue != nil || resolving)
         .padding(.horizontal, Space.md)
         .padding(.bottom, Space.xs)
+    }
+
+    /// Resolves an ENS recipient first, then opens review.
+    private func startReview() {
+        let input = trimmedAddress
+        func open(_ resolved: String, ens: String?) {
+            review = SendDraft(asset: asset, network: network, address: resolved, amount: amount, fee: fee,
+                               ensName: ens, isNewRecipient: !SendRecipients.isKnown(resolved))
+        }
+        guard isENS else { open(input, ens: nil); return }
+        resolving = true
+        Task {
+            do {
+                let resolved = try await EthereumWatch.resolve(input)
+                resolving = false
+                open(resolved, ens: input.lowercased())
+            } catch {
+                resolving = false
+                Haptics.error()
+                resolveError = (error as? LocalizedError)?.errorDescription ?? "Couldn't look up that name."
+            }
+        }
     }
 }

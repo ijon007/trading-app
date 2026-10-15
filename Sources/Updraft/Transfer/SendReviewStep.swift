@@ -19,6 +19,11 @@ struct SendReviewStep: View {
         .animation(.snappy, value: phase)
         .navigationTitle(phase == .sent ? "" : "Review")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                if phase != .sent { TestNetworkTitle(title: "Review") }
+            }
+        }
         .navigationBarBackButtonHidden(phase != .review)
         .interactiveDismissDisabled(phase == .sending)
         .safeAreaInset(edge: .bottom) { bottomButton }
@@ -39,12 +44,27 @@ struct SendReviewStep: View {
                 .padding(.top, Space.md)
 
                 VStack(spacing: 0) {
-                    row("To", short(draft.address), mono: true)
+                    if let ens = draft.ensName { row("To", ens) }
+                    row(draft.ensName == nil ? "To" : "Address", short(draft.address), mono: true)
                     row("Network", draft.network)
                     row("Network fee", "~" + draft.fee.fiat)
                     row("Total", (draft.value + draft.fee).fiat, divider: false, strong: true)
                 }
                 .transferCard()
+
+                if draft.isNewRecipient {
+                    HStack(alignment: .top, spacing: Space.sm) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Color.orange)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("New address").font(Typo.body.weight(.medium)).foregroundStyle(Theme.textPrimary)
+                            Text("You haven't sent to this address before. Check every character.")
+                                .font(Typo.callout).foregroundStyle(Theme.textSecondary)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .transferCard()
+                }
 
                 Text("Crypto transfers can't be reversed. Check the address before you send.")
                     .font(Typo.callout)
@@ -72,7 +92,18 @@ struct SendReviewStep: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    @ViewBuilder
     private var bottomButton: some View {
+        if phase == .review {
+            HoldToConfirm(title: "Hold to send \(draft.asset.symbol)") { confirm() }
+                .padding(.horizontal, Space.md)
+                .padding(.bottom, Space.xs)
+        } else {
+            actionButton
+        }
+    }
+
+    private var actionButton: some View {
         Button {
             switch phase {
             case .review: confirm()
@@ -97,8 +128,8 @@ struct SendReviewStep: View {
     }
 
     private func confirm() {
-        Haptics.medium()
         phase = .sending
+        SendRecipients.remember(draft.address)
         Task {
             try? await Task.sleep(for: .seconds(1.1)) // sample network round trip
             Haptics.success()
