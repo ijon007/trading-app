@@ -20,8 +20,8 @@ enum Swap {
 /// Swap drawer: from coin + amount, flip, to coin with estimate, then review.
 struct SwapSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var from = SampleData.holdings[0]
-    @State private var to = SampleData.allAssetsAsHoldings.first { $0.asset.id == "ETH" } ?? SampleData.holdings[1]
+    @State private var from = SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]
+    @State private var to = SampleData.allAssetsAsHoldings.first { $0.asset.id == "ETH" } ?? SampleData.allAssetsAsHoldings[1]
     @State private var amountText = ""
     @State private var flipTurns = 0.0
     @State private var review: SwapDraft?

@@ -58,7 +58,7 @@ extension Asset {
             amount: holding.amount,
             value: holding.value,
             averageCost: price / (2.1 - returnFactor),
-            portfolioShare: holding.value / SampleData.totalBalance,
+            portfolioShare: SampleData.totalBalance > 0 ? holding.value / SampleData.totalBalance : 0,
             realized: holding.value * (rng.next() * 0.12 - 0.03),
             todayReturn: holding.value - holding.value / (1 + change24h / 100)
         )

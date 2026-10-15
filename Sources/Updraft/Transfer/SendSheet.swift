@@ -13,8 +13,8 @@ struct SendDraft: Hashable {
 /// Send drawer: asset, recipient, amount, fee, then review.
 struct SendSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var holding = SampleData.holdings[0]
-    @State private var network = SampleData.holdings[0].asset.networks[0]
+    @State private var holding = SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]
+    @State private var network = (SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]).asset.networks[0]
     @State private var address = ""
     @State private var amountText = ""
     @State private var inFiat = false

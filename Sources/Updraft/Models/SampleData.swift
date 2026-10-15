@@ -36,7 +36,7 @@ enum SampleData {
     static var totalBalance: Double { holdings.reduce(0) { $0 + $1.value } }
     static var totalChange24h: Double {
         let prev = holdings.reduce(0) { $0 + $1.value / (1 + $1.asset.change24h / 100) }
-        return (totalBalance - prev) / prev * 100
+        return prev > 0 ? (totalBalance - prev) / prev * 100 : 0
     }
 
     /// Name from onboarding, falling back to the sample user.

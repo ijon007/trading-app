@@ -4,8 +4,9 @@ import CoreImage.CIFilterBuiltins
 /// Receive drawer: pick asset and network, show a scannable address.
 struct ReceiveSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var holding = SampleData.holdings[0]
-    @State private var network = SampleData.holdings[0].asset.networks[0]
+    // Any coin can be received, so an empty account still has a default.
+    @State private var holding = SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]
+    @State private var network = (SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]).asset.networks[0]
     @State private var copied = false
 
     private var asset: Asset { holding.asset }
@@ -16,7 +17,7 @@ struct ReceiveSheet: View {
             ScrollView {
                 VStack(spacing: Space.lg) {
                     VStack(spacing: Space.md) {
-                        AssetPickerRow(holding: $holding, showBalance: false)
+                        AssetPickerRow(holding: $holding, showBalance: false, options: SampleData.allAssetsAsHoldings)
                         Divider().overlay(Theme.hairline)
                         NetworkRow(networks: asset.networks, network: $network)
                     }
