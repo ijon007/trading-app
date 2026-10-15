@@ -8,8 +8,14 @@ struct ExploreView: View {
     /// Read so the screen redraws in the new currency.
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
 
+    /// Biggest 24h movers up. On a red day nothing is positive, which emptied
+    /// the marquee; it now always shows the best performers.
     private var topGainers: [Asset] {
-        SampleData.assets.filter { $0.change24h > 0 }.sorted { $0.change24h > $1.change24h }
+        Array(SampleData.assets.sorted { $0.change24h > $1.change24h }.prefix(8))
+    }
+
+    private var gainersTitle: String {
+        topGainers.contains { $0.change24h > 0 } ? "Top gainers" : "Top movers"
     }
 
     private var assets: [Asset] {
@@ -32,7 +38,7 @@ struct ExploreView: View {
             List {
                 if query.isEmpty {
                     // Plain row, not a Section header, so it scrolls away instead of pinning.
-                    sectionTitle("Top gainers")
+                    sectionTitle(gainersTitle)
                         .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.md, bottom: 0, trailing: Space.md))
                         .listRowSeparator(.hidden)
                         .listRowBackground(Color.clear)
