@@ -23,6 +23,7 @@ struct RootView: View {
             Tab(value: AppTab.profile) { ProfileView() } label: { icon("person.crop.circle.fill", "Profile") }
         }
         .sensoryFeedback(.selection, trigger: tab)
+        .privacyFlipToHide()
     }
 
     /// Icon-only tab label; the title stays for VoiceOver.
