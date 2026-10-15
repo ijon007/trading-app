@@ -6,6 +6,7 @@ struct CoinDetailSheet: View {
     let asset: Asset
     @State private var timeframe: Timeframe = .day
     @State private var selectedDate: Date?
+    @State private var trade: TradeSide?
     /// Read so the screen redraws in the new currency.
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
 
@@ -51,6 +52,7 @@ struct CoinDetailSheet: View {
         .sensoryFeedback(.selection, trigger: selected?.date) { _, new in new != nil }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .sheet(item: $trade) { TradeSheet(asset: asset, side: $0) }
     }
 
     // MARK: Header
@@ -291,6 +293,7 @@ struct CoinDetailSheet: View {
         HStack(spacing: Space.sm) {
             Button {
                 Haptics.tap()
+                trade = .sell
             } label: {
                 Text("Sell").font(Typo.headline).frame(maxWidth: .infinity)
             }
@@ -299,6 +302,7 @@ struct CoinDetailSheet: View {
 
             Button {
                 Haptics.tap()
+                trade = .buy
             } label: {
                 Text("Buy").font(Typo.headline).foregroundStyle(Theme.background).frame(maxWidth: .infinity)
             }
