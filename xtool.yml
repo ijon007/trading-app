@@ -1,3 +1,4 @@
 version: 1
 bundleID: com.ijon007.Updraft
 infoPath: Info.plist
+iconPath: Resources/AppIcon.png
