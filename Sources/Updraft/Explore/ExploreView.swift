@@ -30,6 +30,17 @@ struct ExploreView: View {
     var body: some View {
         NavigationStack {
             List {
+                // Custom title: the system large title sits under a tall nav bar.
+                Text("Explore")
+                    .font(.system(size: 34, weight: .bold))
+                    .tracking(-0.6)
+                    .foregroundStyle(Theme.textPrimary)
+                    .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.md, bottom: Space.xs, trailing: Space.md))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+
+                // Only the search field pins; everything else scrolls under it.
+                Section {
                 if query.isEmpty {
                     // Plain row, not a Section header, so it scrolls away instead of pinning.
                     sectionTitle("Top gainers")
@@ -58,6 +69,10 @@ struct ExploreView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparatorTint(Theme.hairline)
                 }
+                } header: {
+                    searchField
+                        .listRowInsets(EdgeInsets(top: Space.xs, leading: Space.md, bottom: Space.xs, trailing: Space.md))
+                }
             }
             .listStyle(.plain)
             .environment(\.defaultMinListRowHeight, 0)
@@ -66,15 +81,38 @@ struct ExploreView: View {
             .contentMargins(.top, 0, for: .scrollContent)
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
-            .navigationTitle("Explore")
-            .toolbarTitleDisplayMode(.large)
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search coins")
+            .toolbar(.hidden, for: .navigationBar)
+            .scrollDismissesKeyboard(.immediately)
             .sensoryFeedback(.selection, trigger: filter)
             .animation(.spring(response: 0.35, dampingFraction: 1), value: filter)
             .overlay {
                 if assets.isEmpty { ContentUnavailableView.search(text: query) }
             }
         }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: Space.xs) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(Theme.textSecondary)
+            TextField("Search coins", text: $query)
+                .font(Typo.body)
+                .foregroundStyle(Theme.textPrimary)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+            if !query.isEmpty {
+                Button("Clear search", systemImage: "xmark.circle.fill") { query = "" }
+                    .labelStyle(.iconOnly)
+                    .foregroundStyle(Theme.textTertiary)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, Space.sm)
+        .frame(height: 40)
+        .background(Theme.surfaceHi, in: .capsule)
+        .animation(.snappy(duration: 0.2), value: query.isEmpty)
     }
 
     private func sectionTitle(_ text: String) -> some View {
