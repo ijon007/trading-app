@@ -27,6 +27,13 @@ struct HomeView: View {
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
 
+                if holdings.isEmpty {
+                    EmptyAccountView { transfer = .receive }
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .transition(.opacity.combined(with: .offset(y: 8)))
+                } else {
                 Section {
                     ForEach(holdings) { holding in
                         HoldingRow(holding: holding)
@@ -36,13 +43,11 @@ struct HomeView: View {
                             .listRowSeparatorTint(Theme.hairline)
                             .listRowInsets(EdgeInsets(top: Space.row, leading: Space.md, bottom: Space.row, trailing: Space.md))
                     }
-                    if holdings.isEmpty {
-                        EmptyAccountView { transfer = .receive }.listRowBackground(Color.clear).listRowSeparator(.hidden)
-                    }
                 } header: {
                     Text("Holdings")
                         .font(Typo.headline)
                         .foregroundStyle(Theme.textPrimary)
+                }
                 }
             }
             .listStyle(.plain)
@@ -82,6 +87,8 @@ struct HomeView: View {
                     }
                     .glassCircleButton()
                     .tint(Theme.textPrimary)
+                    // Nothing to send or swap from an empty account.
+                    .disabled(holdings.isEmpty && action.title != "Receive")
                     .accessibilityLabel(action.title)
                     Text(action.title).font(Typo.caption).foregroundStyle(Theme.textSecondary)
                 }
