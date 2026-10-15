@@ -28,7 +28,6 @@ struct OnboardingView: View {
             case .questions:
                 OnboardingQuestions(answers: answers, onBackFromStart: { go(.getStarted) }) {
                     answers.save()
-                    Haptics.success()
                     go(.done)
                 }
                 .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
@@ -62,65 +61,75 @@ struct OnboardingView: View {
 private struct AllSetView: View {
     let answers: OnboardingAnswers
     let onContinue: () -> Void
-    @State private var shown = false
+    @State private var done = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
-            Image(systemName: "checkmark")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundStyle(Theme.background)
-                .frame(width: 72, height: 72)
-                .background(Theme.textPrimary, in: .circle)
-                .scaleEffect(shown || reduceMotion ? 1 : 0.6)
-                .opacity(shown ? 1 : 0)
-                .symbolEffect(.bounce, value: shown)
+            UpdraftMark(size: 72)
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.background)
+                        .frame(width: 26, height: 26)
+                        .background(Theme.positive, in: .circle)
+                        .overlay(Circle().strokeBorder(Theme.background, lineWidth: 2.5))
+                        .offset(x: 8, y: 8)
+                        .scaleEffect(done || reduceMotion ? 1 : 0.5)
+                        .opacity(done ? 1 : 0)
+                }
                 .padding(.bottom, Space.lg)
+                .staggered(0)
             Text("You're all set,\n\(answers.firstName).")
-                .font(.system(size: 40, weight: .bold))
-                .tracking(-1)
+                .font(OnboardType.display)
+                .tracking(-0.8)
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+                .staggered(1)
             Text(summary)
-                .font(Typo.body)
+                .font(OnboardType.body)
                 .foregroundStyle(Theme.textSecondary)
+                .lineSpacing(2)
                 .padding(.top, Space.sm)
                 .fixedSize(horizontal: false, vertical: true)
+                .staggered(2)
             HStack(spacing: Space.xs) {
-                ForEach(chips, id: \.self) { chip in
+                ForEach(Array(chips.enumerated()), id: \.offset) { i, chip in
                     Text(chip)
-                        .font(Typo.caption)
+                        .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(Theme.textPrimary)
                         .padding(.horizontal, Space.sm)
                         .padding(.vertical, 6)
                         .overlay(Capsule().strokeBorder(Theme.hairline, lineWidth: 1))
+                        .staggered(3 + i)
                 }
             }
             .padding(.top, Space.md)
-            .opacity(shown ? 1 : 0)
-            .offset(y: shown || reduceMotion ? 0 : 8)
             Spacer()
             Button(action: onContinue) {
-                Text("Go to Home").font(Typo.headline).frame(maxWidth: .infinity)
+                Text("Go to Home").font(.system(size: 17, weight: .medium)).frame(maxWidth: .infinity)
             }
             .glassProminentButton()
             .controlSize(.large)
+            .staggered(6)
         }
         .padding(.horizontal, Space.lg)
         .padding(.bottom, Space.md)
         .onAppear {
-            withAnimation(reduceMotion ? .easeOut(duration: 0.25) : .spring(duration: 0.6, bounce: 0.25).delay(0.1)) { shown = true }
+            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(duration: 0.45, bounce: 0.3).delay(0.35)) { done = true }
         }
+        .sensoryFeedback(.success, trigger: done) { _, new in new }
     }
 
     private var summary: String {
-        let goals = answers.goals.isEmpty ? "" : " Focused on " + Goal.allCases.filter(answers.goals.contains).map { $0.title.lowercased() }.joined(separator: ", ") + "."
-        return "Your Updraft is ready, with prices in \(answers.currency.displayName.lowercased().capitalizedFirst).\(goals)"
+        let goals = Goal.allCases.filter(answers.goals.contains).map { $0.title.lowercased() }
+        let focus = goals.isEmpty ? "" : " We'll keep the focus on " + ListFormatter.localizedString(byJoining: goals) + "."
+        return "Prices will show in \(answers.currency.displayName.lowercased().capitalizedFirst).\(focus)"
     }
 
     private var chips: [String] {
-        [answers.experience?.title, answers.risk?.title, answers.currency.rawValue].compactMap { $0 }
+        [answers.experience?.title, answers.risk.map { "\($0.title) risk" }, answers.currency.rawValue].compactMap { $0 }
     }
 }
 
