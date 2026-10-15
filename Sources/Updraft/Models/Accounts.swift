@@ -39,6 +39,12 @@ final class AccountStore: @unchecked Sendable {
 
     private init() {
         accounts = Account.samples + Self.load()
+        // Reopen on the last selected account once saved ones are loaded;
+        // a stale id (e.g. a removed account) falls back to the first.
+        let key = Account.storageKey
+        if let id = UserDefaults.standard.string(forKey: key), !accounts.contains(where: { $0.id == id }) {
+            UserDefaults.standard.set(accounts[0].id, forKey: key)
+        }
     }
 
     // MARK: Persistence
