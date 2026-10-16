@@ -13,6 +13,8 @@ extension View {
                         .font(.system(size: 22, weight: .semibold))
                         .tracking(Typo.titleTracking)
                         .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize() // toolbar items get a narrow proposal; take the full title width
                         .accessibilityAddTraits(.isHeader)
                 }
                 .sharedBackgroundVisibility(.hidden)
