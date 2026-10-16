@@ -106,6 +106,9 @@ struct PeopleList: View {
     enum Kind: String, Identifiable { case followers = "Followers", following = "Following"; var id: String { rawValue } }
     let kind: Kind
     @State private var selected: SocialProfile?
+    // Drawer as tall as its rows (fittedDrawer), no empty space at the bottom.
+    @State private var height: CGFloat = 360
+    @State private var detent: PresentationDetent = .height(360)
     private var store: SocialStore { .shared }
 
     var body: some View {
@@ -118,6 +121,9 @@ struct PeopleList: View {
                     .listRowSeparator(.hidden)
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+            .bounceWhenOverflows()
+            .measureDrawer()
             .overlay {
                 if people.isEmpty {
                     ContentUnavailableView(kind == .followers ? "No followers yet" : "Not following anyone",
@@ -130,7 +136,6 @@ struct PeopleList: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selected) { PersonProfileSheet(profile: $0) }
         }
-        .presentationDetents([.medium, .large])
-        .presentationDragIndicator(.visible)
+        .fittedDrawer(height: $height, detent: $detent)
     }
 }
