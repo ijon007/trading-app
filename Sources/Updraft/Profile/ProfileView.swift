@@ -12,8 +12,11 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 Section {
-                    ProfileHeader().listRowBackground(Color.clear)
+                    ProfileHeader()
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 0, leading: Space.md, bottom: 0, trailing: Space.md))
                 }
+                .listSectionSpacing(Space.lg)
                 Section("Account") {
                     row("Personal info", "person") { PersonalInfoView() }
                     row("Verification", "checkmark.seal") { VerificationView() }
