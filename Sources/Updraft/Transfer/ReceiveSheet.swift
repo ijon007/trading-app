@@ -8,8 +8,6 @@ struct ReceiveSheet: View {
     @State private var holding = SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]
     @State private var network = (SampleData.holdings.first ?? SampleData.allAssetsAsHoldings[0]).asset.networks[0]
     @State private var copied = false
-    @State private var fittedHeight: CGFloat = 520
-    @State private var detent: PresentationDetent = .height(520)
 
     private var asset: Asset { holding.asset }
     /// A watch account shows its real address on Ethereum networks.
@@ -39,9 +37,6 @@ struct ReceiveSheet: View {
                 .padding(.vertical, Space.md)
             }
             .scrollIndicators(.hidden)
-            .bounceWhenOverflows()
-            .measureDrawer()
-            .background(Theme.background)
             .navigationTitle("Receive")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -53,7 +48,8 @@ struct ReceiveSheet: View {
         .onChange(of: holding) { network = holding.asset.networks[0] }
         .sensoryFeedback(.selection, trigger: holding)
         .sensoryFeedback(.selection, trigger: network)
-        .fittedDrawer(height: $fittedHeight, detent: $detent, opaque: true)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private var qrCode: some View {

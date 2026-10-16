@@ -26,8 +26,6 @@ struct SwapSheet: View {
     @State private var flipTurns = 0.0
     @State private var review: SwapDraft?
     @FocusState private var amountFocused: Bool
-    @State private var fittedHeight: CGFloat = 560
-    @State private var detent: PresentationDetent = .height(560)
 
     private var amount: Double { Double(amountText.replacingOccurrences(of: ",", with: ".")) ?? 0 }
     private var rate: Double { from.asset.price / to.asset.price }
@@ -52,10 +50,7 @@ struct SwapSheet: View {
                 .padding(.vertical, Space.md)
             }
             .scrollIndicators(.hidden)
-            .bounceWhenOverflows()
-            .measureDrawer()
             .scrollDismissesKeyboard(.immediately)
-            .background(Theme.background)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Swap")
             .navigationBarTitleDisplayMode(.inline)
@@ -76,7 +71,8 @@ struct SwapSheet: View {
         }
         .sensoryFeedback(.selection, trigger: from)
         .sensoryFeedback(.selection, trigger: to)
-        .fittedDrawer(height: $fittedHeight, detent: $detent, opaque: true)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private func holdingForTo(_ asset: Asset) -> Holding {
@@ -266,8 +262,6 @@ private struct SwapReviewStep: View {
             .padding(.horizontal, Space.md)
         }
         .scrollIndicators(.hidden)
-        .bounceWhenOverflows()
-        .measureDrawer()
     }
 
     private func side(_ asset: Asset, _ amount: Double, _ caption: String) -> some View {
