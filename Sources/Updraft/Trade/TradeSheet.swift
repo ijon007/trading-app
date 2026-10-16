@@ -62,6 +62,8 @@ struct TradeSheet: View {
     @State private var paymentID: UUID?
     @State private var quote: TradeQuote?
     @State private var methodsOpen = false
+    @State private var fittedHeight: CGFloat = 640
+    @State private var detent: PresentationDetent = .height(640)
 
     init(asset: Asset, side: TradeSide) {
         self.asset = asset
@@ -132,36 +134,39 @@ struct TradeSheet: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: Space.md) {
-                Spacer(minLength: 0)
-                AmountDisplay(amount: primary, value: value, secondary: secondary,
-                              isError: isBlockingError, shake: shake) { swapUnit() }
-                Text(helper)
-                    .font(Typo.callout)
-                    .foregroundStyle(isBlockingError ? Theme.negative : Theme.textSecondary)
-                    .contentTransition(.opacity)
-                    .animation(.smooth(duration: 0.2), value: helper)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-                AmountChips(chips: chips)
-                if side == .buy { paymentRow } else { payoutRow }
-                AmountKeypad(text: $text, maxFractionDigits: digits,
-                             onChange: { chip = nil },
-                             onReject: { shake += 1 })
-                Button {
-                    Haptics.tap()
-                    quote = makeQuote()
-                } label: {
-                    Text(reviewTitle).font(Typo.headline).frame(maxWidth: .infinity).padding(.vertical, Space.xxs)
+            ScrollView {
+                VStack(spacing: Space.md) {
+                    AmountDisplay(amount: primary, value: value, secondary: secondary,
+                                  isError: isBlockingError, shake: shake) { swapUnit() }
+                    Text(helper)
+                        .font(Typo.callout)
+                        .foregroundStyle(isBlockingError ? Theme.negative : Theme.textSecondary)
+                        .contentTransition(.opacity)
+                        .animation(.smooth(duration: 0.2), value: helper)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    AmountChips(chips: chips)
+                    if side == .buy { paymentRow } else { payoutRow }
+                    AmountKeypad(text: $text, maxFractionDigits: digits,
+                                 onChange: { chip = nil },
+                                 onReject: { shake += 1 })
+                    Button {
+                        Haptics.tap()
+                        quote = makeQuote()
+                    } label: {
+                        Text(reviewTitle).font(Typo.headline).frame(maxWidth: .infinity).padding(.vertical, Space.xxs)
+                    }
+                    .glassProminentButton()
+                    .controlSize(.large)
+                    .disabled(issue != nil)
+                    .animation(.smooth(duration: 0.2), value: issue)
                 }
-                .glassProminentButton()
-                .controlSize(.large)
-                .disabled(issue != nil)
-                .animation(.smooth(duration: 0.2), value: issue)
+                .padding(.horizontal, Space.md)
+                .padding(.bottom, Space.xs)
             }
-            .padding(.horizontal, Space.md)
-            .padding(.bottom, Space.xs)
+            .scrollIndicators(.hidden)
+            .bounceWhenOverflows()
+            .measureDrawer()
             .background(Theme.background)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -185,8 +190,7 @@ struct TradeSheet: View {
         .onChange(of: side) { methodsOpen = false; reset() }
         .onChange(of: isBlockingError) { _, new in if new { shake += 1 } }
         .onAppear { paymentID = paymentID ?? payments.defaultID }
-        .presentationDetents([.inset])
-        .presentationDragIndicator(.visible)
+        .fittedDrawer(height: $fittedHeight, detent: $detent)
     }
 
     private var reviewTitle: String {
@@ -367,6 +371,7 @@ private struct TradeReviewScreen: View {
             }
             .scrollIndicators(.hidden)
             .bounceWhenOverflows()
+            .measureDrawer()
 
             Button(action: confirm) {
                 HStack(spacing: Space.xs) {

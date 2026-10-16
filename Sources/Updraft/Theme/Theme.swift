@@ -65,4 +65,51 @@ extension View {
     func bounceWhenOverflows() -> some View {
         scrollBounceBehavior(.basedOnSize)
     }
+
+    /// Sizes a drawer to its scroll content. Pair with `measureDrawer()` on the ScrollView.
+    func fittedDrawer(height: Binding<CGFloat>, detent: Binding<PresentationDetent>) -> some View {
+        self
+            .environment(\.drawerFit, DrawerFit(height: height, detent: detent))
+            .presentationDetents([.height(height.wrappedValue)], selection: detent)
+            .presentationDragIndicator(.visible)
+    }
+
+    /// Reports this scroll view's content height to the enclosing `fittedDrawer`.
+    func measureDrawer() -> some View {
+        modifier(MeasureDrawer())
+    }
+}
+
+struct DrawerFit {
+    var height: Binding<CGFloat>
+    var detent: Binding<PresentationDetent>
+}
+
+private struct DrawerFitKey: EnvironmentKey {
+    static let defaultValue: DrawerFit? = nil
+}
+
+extension EnvironmentValues {
+    var drawerFit: DrawerFit? {
+        get { self[DrawerFitKey.self] }
+        set { self[DrawerFitKey.self] = newValue }
+    }
+}
+
+private struct MeasureDrawer: ViewModifier {
+    @Environment(\.drawerFit) private var fit
+
+    func body(content: Content) -> some View {
+        content.onScrollGeometryChange(for: CGFloat.self) { geo in
+            (geo.contentSize.height + geo.contentInsets.top + geo.contentInsets.bottom).rounded()
+        } action: { _, h in
+            guard let fit, h > 0 else { return }
+            let current = fit.height.wrappedValue
+            guard abs(h - current) > 1 else { return }
+            let follow = fit.detent.wrappedValue == .height(current)
+            let capped = min(h, (UIScreen.main.bounds.height * 0.92).rounded())
+            fit.height.wrappedValue = capped
+            if follow { withAnimation(.smooth(duration: 0.3)) { fit.detent.wrappedValue = .height(capped) } }
+        }
+    }
 }

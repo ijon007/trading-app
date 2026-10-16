@@ -62,6 +62,8 @@ struct SendSheet: View {
     @State private var resolving = false
     @State private var resolveError: String?
     @FocusState private var amountFocused: Bool
+    @State private var fittedHeight: CGFloat = 560
+    @State private var detent: PresentationDetent = .height(560)
 
     private var asset: Asset { holding.asset }
     private var currency: Currency { .current }
@@ -109,6 +111,7 @@ struct SendSheet: View {
             }
             .scrollIndicators(.hidden)
             .bounceWhenOverflows()
+            .measureDrawer()
             .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Send")
@@ -133,8 +136,7 @@ struct SendSheet: View {
         .sensoryFeedback(.selection, trigger: holding)
         .sensoryFeedback(.selection, trigger: network)
         .sensoryFeedback(.selection, trigger: inFiat)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.visible)
+        .fittedDrawer(height: $fittedHeight, detent: $detent)
     }
 
     // MARK: Recipient

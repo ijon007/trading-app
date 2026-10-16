@@ -114,6 +114,8 @@ struct CoinSelectorList: View {
     let options: [Holding]
     let title: String
     @Environment(\.dismiss) private var dismiss
+    @State private var fittedHeight: CGFloat = 420
+    @State private var detent: PresentationDetent = .height(420)
 
     var body: some View {
         NavigationStack {
@@ -136,6 +138,7 @@ struct CoinSelectorList: View {
             }
             .scrollIndicators(.hidden)
             .bounceWhenOverflows()
+            .measureDrawer()
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -144,8 +147,7 @@ struct CoinSelectorList: View {
                 }
             }
         }
-        .presentationDetents([.medium, .inset])
-        .presentationDragIndicator(.visible)
+        .fittedDrawer(height: $fittedHeight, detent: $detent)
     }
 
     private func row(_ h: Holding) -> some View {

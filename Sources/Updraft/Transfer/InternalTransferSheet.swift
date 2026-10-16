@@ -12,6 +12,8 @@ struct InternalTransferSheet: View {
     @FocusState private var amountFocused: Bool
     /// Called after a completed transfer (e.g. to close a parent Send sheet).
     var onFinish: (() -> Void)? = nil
+    @State private var fittedHeight: CGFloat = 520
+    @State private var detent: PresentationDetent = .height(520)
 
     private enum Phase { case edit, review, done }
 
@@ -69,8 +71,7 @@ struct InternalTransferSheet: View {
         .onChange(of: holding) { amountText = "" }
         .sensoryFeedback(.selection, trigger: fromID)
         .sensoryFeedback(.selection, trigger: toID)
-        .presentationDetents([.inset])
-        .presentationDragIndicator(.visible)
+        .fittedDrawer(height: $fittedHeight, detent: $detent)
     }
 
     // MARK: Edit
@@ -128,6 +129,7 @@ struct InternalTransferSheet: View {
         }
         .scrollIndicators(.hidden)
         .bounceWhenOverflows()
+        .measureDrawer()
         .scrollDismissesKeyboard(.immediately)
     }
 
@@ -179,6 +181,7 @@ struct InternalTransferSheet: View {
             .padding(.horizontal, Space.md)
         }
         .bounceWhenOverflows()
+        .measureDrawer()
     }
 
     private func line(_ title: String, _ value: String) -> some View {

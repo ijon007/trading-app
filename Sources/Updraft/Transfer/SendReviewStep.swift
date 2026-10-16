@@ -75,6 +75,7 @@ struct SendReviewStep: View {
         }
         .scrollIndicators(.hidden)
         .bounceWhenOverflows()
+        .measureDrawer()
     }
 
     private var success: some View {
