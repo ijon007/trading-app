@@ -124,7 +124,7 @@ private struct BalanceSummary: View {
 
 /// Owns the raw drag position. The heavy plot is an Equatable view that only
 /// redraws when the data or color changes; the indicator is a light overlay.
-private struct ScrubbableChart: View {
+struct ScrubbableChart: View {
     let points: [PricePoint]
     let tint: Color
     @Binding var selectedIndex: Int?

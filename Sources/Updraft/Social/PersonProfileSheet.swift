@@ -5,6 +5,7 @@ import SwiftUI
 struct PersonProfileSheet: View {
     let profile: SocialProfile
     @State private var period: LeaderPeriod = .day
+    @State private var scrub: Int?
     private var store: SocialStore { .shared }
 
     var body: some View {
@@ -41,6 +42,7 @@ struct PersonProfileSheet: View {
                                 .animation(.snappy, value: rank)
                         }
                     }
+                    chart
                     Picker("Period", selection: $period) {
                         ForEach(LeaderPeriod.allCases) { Text($0.rawValue).tag($0) }
                     }
@@ -58,6 +60,18 @@ struct PersonProfileSheet: View {
         .sensoryFeedback(.selection, trigger: period)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+
+    /// Account value line (same chart as Home), tinted by the period's return.
+    private var chart: some View {
+        let points = store.service.series(for: profile, period: period)
+        return ScrubbableChart(points: points, tint: profile.returnFor(period) >= 0 ? Theme.positive : Theme.negative,
+                               selectedIndex: $scrub)
+            .frame(height: 140)
+            .padding(.horizontal, -Space.md) // edge to edge, like Home
+            .id(period)
+            .transition(.opacity)
+            .animation(.smooth(duration: 0.3), value: period)
     }
 
     private func count(_ n: Int, _ label: String) -> some View {

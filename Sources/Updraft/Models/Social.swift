@@ -52,11 +52,42 @@ protocol SocialService: Sendable {
     func activity() -> [ActivityItem]
     /// Ids of sample people who follow you.
     func followerIDs() -> [String]
+    /// Account value over a period, ending at their return for it.
+    func series(for profile: SocialProfile, period: LeaderPeriod) -> [PricePoint]
 }
 
 struct MockSocialService: SocialService {
     func people() -> [SocialProfile] { Self.samplePeople }
     func followerIDs() -> [String] { ["f1", "f3", "f4", "f7", "f8"] }
+
+    /// Seeded random walk per person and period that starts at 100 and ends at
+    /// 100 × (1 + return), so the line always agrees with the % shown.
+    func series(for profile: SocialProfile, period: LeaderPeriod) -> [PricePoint] {
+        let (count, step): (Int, TimeInterval) = switch period {
+        case .day: (96, 900)
+        case .week: (84, 7200)
+        case .month: (90, 28_800)
+        case .all: (120, 86_400 * 3)
+        }
+        var seed: UInt64 = 1469598103934665603
+        for b in (profile.id + period.rawValue).utf8 { seed = (seed ^ UInt64(b)) &* 1099511628211 }
+        func next() -> Double {
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            return Double(seed >> 11) / Double(1 << 53) - 0.5
+        }
+        let end = 100 * (1 + profile.returnFor(period) / 100)
+        let vol = max(abs(end - 100), 1.5) * 0.18
+        var walk: [Double] = [0]
+        for _ in 1..<count { walk.append(walk[walk.count - 1] + next() * vol) }
+        // Bridge: bend the walk so it starts at 100 and lands exactly on `end`.
+        let last = walk[count - 1]
+        let now = Date.now
+        return (0..<count).map { i in
+            let t = Double(i) / Double(count - 1)
+            let value = 100 + (end - 100) * t + (walk[i] - last * t)
+            return PricePoint(date: now.addingTimeInterval(-Double(count - 1 - i) * step), price: max(value, 1))
+        }
+    }
 
     func activity() -> [ActivityItem] {
         let now = Date.now
