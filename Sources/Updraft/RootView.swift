@@ -28,7 +28,18 @@ struct RootView: View {
             Tab(value: AppTab.home) { HomeView() } label: { Label { Text("Home") } icon: { Image(uiImage: UpdraftTabIcon.image) }.labelStyle(.iconOnly).accessibilityLabel("Home") }
             Tab(value: AppTab.explore) { ExploreView() } label: { icon("safari.fill", "Explore") }
             Tab(value: AppTab.social) { SocialView() } label: { icon("person.2.fill", "Social") }
-            Tab(value: AppTab.profile) { ProfileView() } label: { icon("person.crop.circle.fill", "Profile") }
+            Tab(value: AppTab.profile) { ProfileView() } label: {
+                // Your photo, drawn as-is; the silhouette stays a tintable symbol.
+                Label { Text("Profile") } icon: {
+                    if let image = ProfileTabIcon.image(SocialStore.shared.photo) {
+                        Image(uiImage: image)
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                    }
+                }
+                .labelStyle(.iconOnly)
+                .accessibilityLabel("Profile")
+            }
         }
         .sensoryFeedback(.selection, trigger: tab)
         .privacyFlipToHide()

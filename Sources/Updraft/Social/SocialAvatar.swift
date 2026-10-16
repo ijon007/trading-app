@@ -30,6 +30,26 @@ extension SocialStore {
     func photo(for profile: SocialProfile) -> Data? { profile.id == me.id ? photo : nil }
 }
 
+/// Small circular copy of your photo for the tab bar (rendered original, not tinted).
+enum ProfileTabIcon {
+    @MainActor private static var cache: (Int, UIImage)?
+
+    @MainActor static func image(_ photo: Data?) -> UIImage? {
+        guard let photo, let source = UIImage(data: photo) else { return nil }
+        if let cache, cache.0 == photo.hashValue { return cache.1 }
+        let side: CGFloat = 28
+        let image = UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { _ in
+            let rect = CGRect(x: 0, y: 0, width: side, height: side)
+            UIBezierPath(ovalIn: rect).addClip()
+            let scale = side / min(source.size.width, source.size.height)
+            let size = CGSize(width: source.size.width * scale, height: source.size.height * scale)
+            source.draw(in: CGRect(x: (side - size.width) / 2, y: (side - size.height) / 2, width: size.width, height: size.height))
+        }.withRenderingMode(.alwaysOriginal)
+        cache = (photo.hashValue, image)
+        return image
+    }
+}
+
 /// Return % tinted up/down. Percentages stay visible in privacy mode.
 struct ReturnText: View {
     let value: Double
