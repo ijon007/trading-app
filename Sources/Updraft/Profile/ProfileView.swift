@@ -74,9 +74,6 @@ struct ProfileView: View {
             .sensoryFeedback(.selection, trigger: notifications)
             .sensoryFeedback(.selection, trigger: currency)
             .sheet(item: $headerSheet) { ProfileHeader.content($0) }
-            .onChange(of: headerSheet) { old, new in
-                profileLog.notice("UPD headerSheet \(old?.rawValue ?? "nil", privacy: .public) -> \(new?.rawValue ?? "nil", privacy: .public)")
-            }
             .confirmationDialog("Sign out of Updraft?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button("Sign out", role: .destructive) { Haptics.success() }
             }

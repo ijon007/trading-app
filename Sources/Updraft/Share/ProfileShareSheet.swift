@@ -49,8 +49,6 @@ struct ProfileShareSheet: View {
         .background(Theme.background)
         .sensoryFeedback(.selection, trigger: page)
         .task(id: "\(page.rawValue)|\(privacyOn)|\(scheme == .dark)") { render() }
-        .onAppear { profileLog.notice("UPD appear share") }
-        .onDisappear { profileLog.notice("UPD disappear share") }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }

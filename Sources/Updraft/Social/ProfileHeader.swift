@@ -1,7 +1,5 @@
 import SwiftUI
-import os
 
-let profileLog = Logger(subsystem: "com.ijon007.Updraft", category: "ProfileHeader")
 
 /// Profile header, left-aligned: photo, name, @handle, bio, follower counts,
 /// Edit profile. Share sits top-right.
@@ -81,7 +79,6 @@ struct ProfileHeader: View {
     }
 
     private func open(_ s: Sheet) {
-        profileLog.notice("UPD tap \(s.rawValue, privacy: .public)")
         Haptics.tap()
         sheet = s
     }
@@ -143,8 +140,6 @@ struct PeopleList: View {
                                            systemImage: "person.2")
                 }
             }
-            .onAppear { profileLog.notice("UPD appear people \(kind.rawValue, privacy: .public)") }
-            .onDisappear { profileLog.notice("UPD disappear people") }
             .navigationTitle(kind.rawValue)
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selected) { PersonProfileSheet(profile: $0) }
