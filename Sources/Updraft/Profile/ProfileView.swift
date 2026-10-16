@@ -14,9 +14,10 @@ struct ProfileView: View {
                 Section {
                     ProfileHeader()
                         .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 0, leading: Space.md, bottom: 0, trailing: Space.md))
+                        // Zero insets: the header's edges line up with the cards below.
+                        .listRowInsets(EdgeInsets())
                 }
-                .listSectionSpacing(Space.lg)
+                .listSectionSpacing(Space.xs)
                 Section("Account") {
                     row("Personal info", "person") { PersonalInfoView() }
                     row("Verification", "checkmark.seal") { VerificationView() }
