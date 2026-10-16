@@ -127,13 +127,20 @@ struct ProfileShareSheet: View {
                 return
             }
             do {
-                try await PHPhotoLibrary.shared().performChanges {
-                    PHAssetChangeRequest.creationRequestForAsset(from: rendered)
-                }
+                try await Self.addToPhotos(rendered)
                 flash("Saved")
             } catch {
                 flash("No access", success: false)
             }
+        }
+    }
+
+    /// Nonisolated on purpose: Photos runs the change block on its own queue.
+    /// Written inline in this @MainActor view, the closure inherited MainActor
+    /// isolation and Swift 6's runtime check trapped (dispatch_assert_queue_fail).
+    nonisolated private static func addToPhotos(_ image: UIImage) async throws {
+        try await PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAsset(from: image)
         }
     }
 
