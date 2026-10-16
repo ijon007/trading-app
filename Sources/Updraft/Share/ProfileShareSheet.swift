@@ -200,11 +200,14 @@ struct ShareCard: View {
             }
             Spacer()
             // Watermark, trailing in the header row.
-            HStack(spacing: Space.xxs) {
-                UpdraftLogoShape().frame(width: 12, height: 16)
-                Text("Updraft").font(Typo.caption.weight(.medium))
+            // ~1.5x the old caption size, scaled to the card so the export matches.
+            HStack(spacing: side * 0.016) {
+                UpdraftLogoShape().frame(width: side * 0.052, height: side * 0.07)
+                Text("Updraft")
+                    .font(.system(size: side * 0.05, weight: .semibold))
+                    .tracking(-side * 0.0008)
             }
-            .foregroundStyle(Theme.textTertiary)
+            .foregroundStyle(Theme.textSecondary)
         }
     }
 
