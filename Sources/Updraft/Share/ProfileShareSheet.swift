@@ -243,32 +243,89 @@ struct ShareCard: View {
     private var holdings: some View {
         let list = publicHoldings.sorted { $0.value > $1.value }
         let total = max(list.reduce(0) { $0 + $1.value }, 1)
-        return VStack(alignment: .leading, spacing: 0) {
-            ForEach(list.prefix(5), id: \.asset.id) { h in
-                let share = h.value / total
-                HStack(spacing: Space.sm) {
-                    CoinIcon(symbol: h.asset.symbol, size: side * 0.085)
-                    VStack(alignment: .leading, spacing: Space.xxs) {
-                        HStack {
-                            Text(h.asset.symbol).font(Typo.callout.weight(.medium)).foregroundStyle(Theme.textPrimary)
-                            Spacer()
-                            Text(share.formatted(.percent.precision(.fractionLength(0))))
-                                .font(Typo.callout).monospacedDigit().foregroundStyle(Theme.textSecondary)
+        let top = Array(list.prefix(5))
+        let rest = max(1 - top.reduce(0) { $0 + $1.value } / total, 0)
+        return VStack(alignment: .leading, spacing: side * 0.04) {
+            if let lead = top.first {
+                // Hero: allocation ring with the top coin, and its share set large.
+                HStack(spacing: side * 0.06) {
+                    AllocationRing(slices: top.map { (Self.brand($0.asset.symbol), $0.value / total) } + (rest > 0.005 ? [(Theme.hairline, rest)] : []),
+                                   lineWidth: side * 0.05) {
+                        CoinIcon(symbol: lead.asset.symbol, size: side * 0.14)
+                    }
+                    .frame(width: side * 0.34, height: side * 0.34)
+                    VStack(alignment: .leading, spacing: side * 0.008) {
+                        Text("Top holding")
+                            .font(.system(size: side * 0.034, weight: .medium))
+                            .foregroundStyle(Theme.textSecondary)
+                        Text(pct(lead.value / total))
+                            .font(.system(size: side * 0.135, weight: .semibold).monospacedDigit())
+                            .tracking(-side * 0.004)
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1).minimumScaleFactor(0.6)
+                        HStack(spacing: side * 0.015) {
+                            Text(lead.asset.name).foregroundStyle(Theme.textPrimary)
+                            change(lead.asset.change24h)
                         }
-                        GeometryReader { geo in
-                            Capsule().fill(Theme.hairline)
-                                .overlay(alignment: .leading) {
-                                    Capsule().fill(Theme.textPrimary).frame(width: geo.size.width * share)
-                                }
-                        }
-                        .frame(height: 4)
+                        .font(.system(size: side * 0.04, weight: .medium))
                     }
                 }
-                .frame(maxHeight: .infinity) // rows share the height evenly
-            }
-            if list.isEmpty {
+                // The rest: quiet rows sharing the remaining height evenly.
+                VStack(spacing: 0) {
+                    ForEach(top.dropFirst(), id: \.asset.id) { h in
+                        HStack(spacing: side * 0.03) {
+                            Capsule().fill(Self.brand(h.asset.symbol))
+                                .frame(width: side * 0.012, height: side * 0.06)
+                            CoinIcon(symbol: h.asset.symbol, size: side * 0.07)
+                            Text(h.asset.name)
+                                .font(.system(size: side * 0.042, weight: .medium))
+                                .foregroundStyle(Theme.textPrimary)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                            change(h.asset.change24h)
+                                .font(.system(size: side * 0.036, weight: .medium))
+                                .frame(minWidth: side * 0.16, alignment: .trailing)
+                            Text(pct(h.value / total))
+                                .font(.system(size: side * 0.042, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(Theme.textPrimary)
+                                .frame(minWidth: side * 0.12, alignment: .trailing)
+                        }
+                        .frame(maxHeight: .infinity)
+                    }
+                }
+                .frame(maxHeight: .infinity)
+            } else {
                 Text("No public holdings").font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
+        }
+    }
+
+    private func pct(_ v: Double) -> String { v.formatted(.percent.precision(.fractionLength(0))) }
+
+    private func change(_ v: Double) -> some View {
+        Text(v.percent).monospacedDigit().foregroundStyle(v >= 0 ? Theme.positive : Theme.negative)
+    }
+
+    /// Recognisable brand hues for the ring; neutral greys for the rest.
+    static func brand(_ symbol: String) -> Color {
+        switch symbol.uppercased() {
+        case "BTC", "WBTC": Color(hex: 0xF7931A)
+        case "ETH": Color(hex: 0x627EEA)
+        case "SOL": Color(hex: 0x9945FF)
+        case "USDC": Color(hex: 0x2775CA)
+        case "USDT": Color(hex: 0x26A17B)
+        case "XRP": Color(hex: 0x6E7681)
+        case "DOGE": Color(hex: 0xC2A633)
+        case "ADA": Color(hex: 0x0033AD)
+        case "LINK": Color(hex: 0x2A5ADA)
+        case "AVAX": Color(hex: 0xE84142)
+        case "DOT": Color(hex: 0xE6007A)
+        case "LTC": Color(hex: 0x345D9D)
+        case "UNI": Color(hex: 0xFF007A)
+        case "PEPE": Color(hex: 0x3D9B3A)
+        case "SHIB": Color(hex: 0xE0362C)
+        case "ARB": Color(hex: 0x28A0F0)
+        default: Theme.textSecondary
         }
     }
 
@@ -319,5 +376,25 @@ private struct MiniArea: View {
         .chartXAxis(.hidden).chartYAxis(.hidden).chartLegend(.hidden)
         .chartYScale(domain: (lo - pad)...(hi + pad))
         .chartPlotStyle { $0.padding(.zero) }
+    }
+}
+
+/// Donut of allocation slices with small gaps and a centre view.
+private struct AllocationRing<Center: View>: View {
+    let slices: [(Color, Double)]
+    let lineWidth: CGFloat
+    @ViewBuilder let center: Center
+
+    var body: some View {
+        ZStack {
+            Chart(Array(slices.enumerated()), id: \.offset) { _, slice in
+                SectorMark(angle: .value("Share", slice.1), innerRadius: .ratio(0.7), angularInset: 1.2)
+                    .cornerRadius(lineWidth * 0.25)
+                    .foregroundStyle(slice.0)
+            }
+            .chartLegend(.hidden)
+            center
+        }
+        .accessibilityHidden(true)
     }
 }
