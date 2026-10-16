@@ -92,6 +92,7 @@ struct AddAccountSheet: View {
                 .padding(.bottom, Space.md)
             }
             .scrollIndicators(.hidden)
+            .bounceWhenOverflows()
             .onScrollGeometryChange(for: CGFloat.self) { geo in
                 (geo.contentSize.height + geo.contentInsets.top + geo.contentInsets.bottom).rounded()
             } action: { _, height in

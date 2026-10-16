@@ -74,6 +74,7 @@ struct SendReviewStep: View {
             .padding(.horizontal, Space.md)
         }
         .scrollIndicators(.hidden)
+        .bounceWhenOverflows()
     }
 
     private var success: some View {

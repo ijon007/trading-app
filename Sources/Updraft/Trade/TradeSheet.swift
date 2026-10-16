@@ -366,6 +366,7 @@ private struct TradeReviewScreen: View {
                     .padding(.horizontal, Space.md)
             }
             .scrollIndicators(.hidden)
+            .bounceWhenOverflows()
 
             Button(action: confirm) {
                 HStack(spacing: Space.xs) {

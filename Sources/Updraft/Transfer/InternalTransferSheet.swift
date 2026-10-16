@@ -127,6 +127,7 @@ struct InternalTransferSheet: View {
             .padding(Space.md)
         }
         .scrollIndicators(.hidden)
+        .bounceWhenOverflows()
         .scrollDismissesKeyboard(.immediately)
     }
 
@@ -177,6 +178,7 @@ struct InternalTransferSheet: View {
             }
             .padding(.horizontal, Space.md)
         }
+        .bounceWhenOverflows()
     }
 
     private func line(_ title: String, _ value: String) -> some View {

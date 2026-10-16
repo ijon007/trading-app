@@ -49,6 +49,7 @@ struct CoinDetailSheet: View {
             .padding(.bottom, Space.md)
         }
         .scrollIndicators(.hidden)
+        .bounceWhenOverflows()
         .id(currency)
         .safeAreaInset(edge: .bottom) { actions }
         .sensoryFeedback(.selection, trigger: timeframe)

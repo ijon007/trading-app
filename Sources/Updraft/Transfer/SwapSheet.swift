@@ -50,6 +50,7 @@ struct SwapSheet: View {
                 .padding(.vertical, Space.md)
             }
             .scrollIndicators(.hidden)
+            .bounceWhenOverflows()
             .scrollDismissesKeyboard(.immediately)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Swap")
@@ -262,6 +263,7 @@ private struct SwapReviewStep: View {
             .padding(.horizontal, Space.md)
         }
         .scrollIndicators(.hidden)
+        .bounceWhenOverflows()
     }
 
     private func side(_ asset: Asset, _ amount: Double, _ caption: String) -> some View {

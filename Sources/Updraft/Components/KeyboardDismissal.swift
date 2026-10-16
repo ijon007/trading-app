@@ -27,23 +27,49 @@ struct KeyboardDismissal: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         private weak var window: UIWindow?
+        private weak var keyboardTap: UITapGestureRecognizer?
+        private weak var drawerTap: UITapGestureRecognizer?
+        private var keyboardVisible = false
+
+        deinit { NotificationCenter.default.removeObserver(self) }
 
         func install(in window: UIWindow?) {
             guard let window, self.window !== window else { return }
             self.window = window
-            let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
-            tap.cancelsTouchesInView = false
-            tap.delaysTouchesBegan = false
-            tap.delaysTouchesEnded = false
-            tap.delegate = self
-            window.addGestureRecognizer(tap)
+            listenForKeyboard()
+
+            let keyboard = UITapGestureRecognizer(target: self, action: #selector(tappedKeyboard))
+            keyboard.cancelsTouchesInView = false
+            keyboard.delaysTouchesBegan = false
+            keyboard.delaysTouchesEnded = false
+            keyboard.delegate = self
+            window.addGestureRecognizer(keyboard)
+            keyboardTap = keyboard
+
+            let drawer = UITapGestureRecognizer(target: self, action: #selector(tappedDrawer))
+            drawer.cancelsTouchesInView = false
+            drawer.delaysTouchesBegan = false
+            drawer.delaysTouchesEnded = false
+            drawer.delegate = self
+            window.addGestureRecognizer(drawer)
+            drawerTap = drawer
         }
 
-        @objc private func tapped(_ g: UITapGestureRecognizer) {
-            // Keyboard first: a tap that only meant to end editing shouldn't also
-            // close the drawer the user is filling in.
-            let hidKeyboard = window?.endEditing(true) == true
-            guard !hidKeyboard, KeyboardDismissal.isEnabled else { return }
+        private func listenForKeyboard() {
+            let center = NotificationCenter.default
+            center.addObserver(self, selector: #selector(keyboardShown), name: UIResponder.keyboardDidShowNotification, object: nil)
+            center.addObserver(self, selector: #selector(keyboardHidden), name: UIResponder.keyboardDidHideNotification, object: nil)
+        }
+
+        @objc private func keyboardShown() { keyboardVisible = true }
+        @objc private func keyboardHidden() { keyboardVisible = false }
+
+        @objc private func tappedKeyboard() {
+            window?.endEditing(true)
+        }
+
+        @objc private func tappedDrawer(_ g: UITapGestureRecognizer) {
+            guard KeyboardDismissal.isEnabled, !keyboardVisible else { return }
             dismissDrawerIfEmptySpace(g)
         }
 
@@ -82,14 +108,30 @@ struct KeyboardDismissal: UIViewRepresentable {
         nonisolated func gestureRecognizer(_ g: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
             MainActor.assumeIsolated {
                 guard KeyboardDismissal.isEnabled else { return false }
-                // Let taps inside text inputs (and their clear buttons) keep focus.
-                var view = touch.view
-                while let v = view {
-                    if v is UITextField || v is UITextView || v is UISearchBar { return false }
-                    view = v.superview
-                }
-                return true
+                if g === drawerTap { return isEmptySpaceAroundDrawer(touch) }
+                // Keyboard: only while editing, so a tap on a sheet doesn't
+                // compete with the top-of-scroll dismiss pan.
+                if g === keyboardTap { return keyboardVisible && !isTextInput(touch.view) }
+                return false
             }
+        }
+
+        private func isEmptySpaceAroundDrawer(_ touch: UITouch) -> Bool {
+            guard let window, topPresentedSheet(in: window) != nil else { return false }
+            if isDimming(touch.view) { return true }
+            let point = touch.location(in: window)
+            guard let sheet = topPresentedSheet(in: window) else { return false }
+            let card = sheet.view.convert(sheet.view.bounds, to: window)
+            return !card.insetBy(dx: 1, dy: 1).contains(point)
+        }
+
+        private func isTextInput(_ view: UIView?) -> Bool {
+            var current = view
+            while let v = current {
+                if v is UITextField || v is UITextView || v is UISearchBar { return true }
+                current = v.superview
+            }
+            return false
         }
     }
 }

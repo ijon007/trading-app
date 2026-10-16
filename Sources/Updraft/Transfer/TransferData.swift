@@ -135,6 +135,7 @@ struct CoinSelectorList: View {
                 .padding(.horizontal, Space.xs)
             }
             .scrollIndicators(.hidden)
+            .bounceWhenOverflows()
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

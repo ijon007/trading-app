@@ -60,4 +60,9 @@ extension View {
     func glassCard(radius: CGFloat = Theme.radius) -> some View {
         glassEffect(.regular, in: .rect(cornerRadius: radius))
     }
+
+    /// Rubber-band (and the sheet-drag that rides on it) only when content overflows.
+    func bounceWhenOverflows() -> some View {
+        scrollBounceBehavior(.basedOnSize)
+    }
 }

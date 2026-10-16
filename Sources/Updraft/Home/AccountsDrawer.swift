@@ -53,6 +53,7 @@ struct AccountsDrawer: View {
                 .listRowInsets(EdgeInsets(top: 12, leading: Space.md, bottom: 4, trailing: Space.md))
             }
             .listStyle(.plain)
+            .bounceWhenOverflows()
             .environment(\.defaultMinListRowHeight, 0)
             .contentMargins(.vertical, 0, for: .scrollContent)
             .onScrollGeometryChange(for: CGFloat.self) { geo in

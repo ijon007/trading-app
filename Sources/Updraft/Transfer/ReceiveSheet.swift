@@ -37,6 +37,7 @@ struct ReceiveSheet: View {
                 .padding(.vertical, Space.md)
             }
             .scrollIndicators(.hidden)
+            .bounceWhenOverflows()
             .navigationTitle("Receive")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
