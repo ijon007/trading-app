@@ -12,7 +12,12 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 Section {
-                    header.listRowBackground(Color.clear)
+                    ProfileCard().listRowBackground(Color.clear)
+                }
+                Section("Social") {
+                    row("Friends", "person.2") { FriendsView() }
+                        .badge(SocialStore.shared.requests.count)
+                    row("Leaderboard", "trophy") { LeaderboardView() }
                 }
                 Section("Account") {
                     row("Personal info", "person") { PersonalInfoView() }
