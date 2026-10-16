@@ -5,6 +5,8 @@ struct ExploreView: View {
     @AppStorage("explore.filter") private var filter: Filter = .trending
     @State private var query = ""
     @State private var selected: Asset?
+    /// True from opening a coin until its sheet has fully closed.
+    @State private var sheetUp = false
     /// Read so the screen redraws in the new currency.
     @AppStorage(Currency.storageKey) private var currency = Currency.usd.rawValue
 
@@ -77,7 +79,8 @@ struct ExploreView: View {
             // → filter (16) → list. No extra top margin or section spacing.
             .contentMargins(.top, 0, for: .scrollContent)
             .listSectionSpacing(.compact)
-            .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
+            .sheet(item: $selected, onDismiss: { sheetUp = false }) { CoinDetailSheet(asset: $0) }
+            .onChange(of: selected) { _, new in if new != nil { sheetUp = true } }
             .background(Theme.background)
             .navigationTitle("Explore")
             .toolbarTitleDisplayMode(.large)
@@ -98,7 +101,7 @@ struct ExploreView: View {
     }
 
     private var gainersRow: some View {
-        GainersMarquee(assets: topGainers) { selected = $0 }
+        GainersMarquee(assets: topGainers, isCovered: sheetUp) { selected = $0 }
     }
 }
 
@@ -106,6 +109,9 @@ struct ExploreView: View {
 /// falls back to a manual scroll when Reduce Motion is on.
 struct GainersMarquee: View {
     let assets: [Asset]
+    /// A sheet is over the marquee: stop the per-frame timeline so it can't
+    /// steal frames from the sheet's own animation.
+    var isCovered = false
     var onSelect: (Asset) -> Void = { _ in }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var start = Date.now
@@ -125,7 +131,7 @@ struct GainersMarquee: View {
             .scrollClipDisabled()
             .padding(.vertical, Space.sm)
         } else {
-            TimelineView(.animation(paused: pauseStart != nil || period == 0)) { context in
+            TimelineView(.animation(paused: pauseStart != nil || period == 0 || isCovered)) { context in
                 HStack(spacing: 0) {
                     ForEach(0..<3, id: \.self) { copy in
                         cards
@@ -147,12 +153,17 @@ struct GainersMarquee: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { _ in if pauseStart == nil { pauseStart = .now } }
-                    .onEnded { _ in
-                        if let p = pauseStart { pausedTotal += Date.now.timeIntervalSince(p) }
-                        pauseStart = nil
-                    }
+                    .onEnded { _ in resume() }
             )
+            .onChange(of: isCovered) { _, covered in
+                if covered { if pauseStart == nil { pauseStart = .now } } else { resume() }
+            }
         }
+    }
+
+    private func resume() {
+        if let p = pauseStart { pausedTotal += Date.now.timeIntervalSince(p) }
+        pauseStart = nil
     }
 
     private var cards: some View {
