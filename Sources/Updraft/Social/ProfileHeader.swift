@@ -123,7 +123,20 @@ struct PeopleList: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .bounceWhenOverflows()
-            .measureDrawer()
+            .environment(\.defaultMinListRowHeight, 0)
+            .contentMargins(.vertical, 0, for: .scrollContent)
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                // Like AccountsDrawer: the bottom inset includes the tab bar the
+                // sheet covers, which left ~60pt blank under the last row. Keep 8pt.
+                let bottom = min(geo.contentInsets.bottom, Space.xs)
+                return (geo.contentSize.height + geo.contentInsets.top + bottom).rounded()
+            } action: { _, h in
+                guard h > 0, abs(h - height) > 1 else { return }
+                let capped = min(h, (UIScreen.main.bounds.height * 0.92).rounded())
+                let follow = detent == .height(height)
+                height = capped
+                if follow { withAnimation(.smooth(duration: 0.3)) { detent = .height(capped) } }
+            }
             .overlay {
                 if people.isEmpty {
                     ContentUnavailableView(kind == .followers ? "No followers yet" : "Not following anyone",
@@ -136,6 +149,7 @@ struct PeopleList: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheet(item: $selected) { PersonProfileSheet(profile: $0) }
         }
-        .fittedDrawer(height: $height, detent: $detent)
+        .presentationDetents([.height(height)], selection: $detent)
+        .presentationDragIndicator(.visible)
     }
 }
