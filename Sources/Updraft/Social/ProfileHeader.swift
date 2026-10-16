@@ -36,7 +36,7 @@ struct ProfileHeader: View {
                 count(me.followingCount, "Following") { list = .following }
             }
             Button { Haptics.tap(); editing = true } label: {
-                Label("Edit profile", systemImage: "person.crop.circle")
+                Label("Edit profile", systemImage: "pencil.line")
                     .font(Typo.callout.weight(.medium))
                     .frame(maxWidth: .infinity)
             }
