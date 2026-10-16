@@ -80,7 +80,7 @@ struct ExploreView: View {
             .sheet(item: $selected) { CoinDetailSheet(asset: $0) }
             .background(Theme.background)
             .navigationTitle("Explore")
-            .toolbarTitleDisplayMode(.large)
+            .compactHeader("Explore")
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search coins")
             .scrollDismissesKeyboard(.immediately)
             // Tap on empty space ends search editing; rows and buttons still get their taps.

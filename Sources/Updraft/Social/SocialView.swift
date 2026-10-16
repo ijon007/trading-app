@@ -34,6 +34,7 @@ struct SocialView: View {
             .scrollDismissesKeyboard(.immediately)
             .background(Theme.background)
             .navigationTitle("Social")
+            .compactHeader("Social")
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search name or @handle")
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
