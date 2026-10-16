@@ -20,6 +20,9 @@ struct SocialAvatar: View {
         }
         .frame(width: size, height: size)
         .clipShape(.circle)
+        // clipShape only clips drawing: a scaledToFill photo still hit-tests
+        // at its full overflowing size. Limit the tap area to the circle.
+        .contentShape(.circle)
         .overlay(Circle().strokeBorder(Theme.hairline, lineWidth: 0.5))
         .accessibilityHidden(true)
     }
@@ -127,6 +130,10 @@ struct ProfileBanner: View {
         .frame(maxWidth: .infinity)
         .frame(height: height)
         .clipShape(.rect(cornerRadius: Radius.lg))
+        // A scaledToFill photo hit-tests beyond its clip (a portrait banner
+        // ran far down, over Share and Followers). Decorative: no hit testing.
+        .contentShape(.rect)
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 

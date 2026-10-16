@@ -35,8 +35,8 @@ struct ProfileHeader: View {
                     SocialAvatar(photo: store.photo, size: 84)
                         .background(Circle().stroke(Theme.background, lineWidth: 4))
                         .offset(x: Space.md, y: 42)
+                        .allowsHitTesting(false)
                 }
-                .zIndex(1)
             HStack(alignment: .top) {
                 Spacer()
                 Button { open(.share) } label: {
