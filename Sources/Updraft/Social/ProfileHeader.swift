@@ -3,10 +3,26 @@ import SwiftUI
 /// Profile header, left-aligned: photo, name, @handle, bio, follower counts,
 /// Edit profile. Share sits top-right.
 struct ProfileHeader: View {
+    /// Sheets this header opens. Presented by the owning screen, not here: the
+    /// header lives in a List section header, which doesn't reliably host
+    /// presentations (the share drawer never appeared).
+    enum Sheet: String, Identifiable {
+        case edit, followers, following, share
+        var id: String { rawValue }
+    }
+
+    @Binding var sheet: Sheet?
     private var store: SocialStore { .shared }
-    @State private var editing = false
-    @State private var list: PeopleList.Kind?
-    @State private var sharing = false
+
+    /// The view for a header sheet; the owner calls this from its `.sheet(item:)`.
+    @ViewBuilder static func content(_ sheet: Sheet) -> some View {
+        switch sheet {
+        case .edit: EditProfileSheet()
+        case .followers: PeopleList(kind: .followers)
+        case .following: PeopleList(kind: .following)
+        case .share: ProfileShareSheet()
+        }
+    }
 
     var body: some View {
         let me = store.meWithStats
@@ -21,7 +37,7 @@ struct ProfileHeader: View {
                 .zIndex(1)
             HStack(alignment: .top) {
                 Spacer()
-                Button { Haptics.tap(); sharing = true } label: {
+                Button { Haptics.tap(); sheet = .share } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Theme.textPrimary)
@@ -42,10 +58,10 @@ struct ProfileHeader: View {
                 }
             }
             HStack(spacing: Space.md) {
-                count(me.followerCount, "Followers") { list = .followers }
-                count(me.followingCount, "Following") { list = .following }
+                count(me.followerCount, "Followers") { sheet = .followers }
+                count(me.followingCount, "Following") { sheet = .following }
             }
-            Button { Haptics.tap(); editing = true } label: {
+            Button { Haptics.tap(); sheet = .edit } label: {
                 Label("Edit profile", systemImage: "pencil.line")
                     .font(Typo.callout.weight(.medium))
                     .frame(maxWidth: .infinity)
@@ -55,9 +71,6 @@ struct ProfileHeader: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.smooth(duration: 0.3), value: store.me)
-        .sheet(isPresented: $editing) { EditProfileSheet() }
-        .sheet(item: $list) { PeopleList(kind: $0) }
-        .sheet(isPresented: $sharing) { ProfileShareSheet() }
     }
 
     private func count(_ n: Int, _ label: String, action: @escaping () -> Void) -> some View {

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ProfileView: View {
+    @State private var headerSheet: ProfileHeader.Sheet?
     @AppStorage("appearance") private var appearance: Appearance?
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("currency") private var currency = "USD"
@@ -15,7 +16,7 @@ struct ProfileView: View {
                 // section shape, which cut off the glass buttons. Zero insets keep
                 // its edges on the cards' edges.
                 Section {} header: {
-                    ProfileHeader()
+                    ProfileHeader(sheet: $headerSheet)
                         .textCase(nil)
                         .listRowInsets(EdgeInsets())
                         .padding(.bottom, Space.xs)
@@ -61,6 +62,7 @@ struct ProfileView: View {
             .sensoryFeedback(.selection, trigger: faceID)
             .sensoryFeedback(.selection, trigger: notifications)
             .sensoryFeedback(.selection, trigger: currency)
+            .sheet(item: $headerSheet) { ProfileHeader.content($0) }
             .confirmationDialog("Sign out of Updraft?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button("Sign out", role: .destructive) { Haptics.success() }
             }
