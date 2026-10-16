@@ -54,6 +54,13 @@ struct ActivityItem: Identifiable, Hashable, Sendable {
     let personID: String
     let kind: Kind
     let date: Date
+
+    /// Sample trade size in USD, seeded from the id (buys and sells only).
+    var amount: Double {
+        var seed: UInt64 = 1469598103934665603
+        for b in id.utf8 { seed = (seed ^ UInt64(b)) &* 1099511628211 }
+        return Double(150 + seed % 12_000) + Double(seed % 100) / 100
+    }
 }
 
 /// Social backend. The app uses `MockSocialService` (local sample data);
