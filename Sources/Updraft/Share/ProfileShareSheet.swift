@@ -173,14 +173,18 @@ struct ShareCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Space.md) {
             header
-            switch kind {
-            case .portfolio: portfolio
-            case .holdings: holdings
-            case .mover: mover
+            // Body flexes to fill the square; branding pinned to the bottom.
+            Group {
+                switch kind {
+                case .portfolio: portfolio
+                case .holdings: holdings
+                case .mover: mover
+                }
             }
-            Spacer(minLength: 0)
+            .frame(maxHeight: .infinity, alignment: .top)
+            footer
         }
-        .padding(Space.lg)
+        .padding(side * 0.065)
         .frame(width: side, height: side, alignment: .topLeading)
         .background(Theme.surface, in: .rect(cornerRadius: export ? 0 : Radius.xl))
         .overlay {
@@ -190,18 +194,22 @@ struct ShareCard: View {
 
     private var header: some View {
         HStack(spacing: Space.xs) {
-            SocialAvatar(photo: store.photo, size: 32)
+            SocialAvatar(photo: store.photo, size: side * 0.11)
             VStack(alignment: .leading, spacing: 0) {
                 Text(store.me.name).font(Typo.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
                 Text(store.me.atHandle).font(Typo.caption).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
-            HStack(spacing: Space.xxs) {
-                UpdraftLogoShape().frame(width: 12, height: 16)
-                Text("Updraft").font(Typo.caption)
-            }
-            .foregroundStyle(Theme.textTertiary)
         }
+    }
+
+    private var footer: some View {
+        HStack(spacing: Space.xxs) {
+            UpdraftLogoShape().frame(width: 12, height: 16)
+            Text("Updraft").font(Typo.caption.weight(.medium))
+            Spacer()
+        }
+        .foregroundStyle(Theme.textTertiary)
     }
 
 
@@ -222,7 +230,7 @@ struct ShareCard: View {
                 Text(hideAmounts ? "Today" : "\(change.percent) today")
                     .font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
-            MiniArea(values: points, tint: tint).frame(height: 76)
+            MiniArea(values: points, tint: tint).frame(maxHeight: .infinity)
             if !hideAmounts {
                 LabeledContent("Balance") { Text(total.fiat).foregroundStyle(Theme.textPrimary) }
                     .font(Typo.callout).foregroundStyle(Theme.textSecondary)
@@ -235,11 +243,11 @@ struct ShareCard: View {
     private var holdings: some View {
         let list = publicHoldings.sorted { $0.value > $1.value }
         let total = max(list.reduce(0) { $0 + $1.value }, 1)
-        return VStack(alignment: .leading, spacing: Space.sm) {
-            ForEach(list.prefix(4), id: \.asset.id) { h in
+        return VStack(alignment: .leading, spacing: 0) {
+            ForEach(list.prefix(5), id: \.asset.id) { h in
                 let share = h.value / total
                 HStack(spacing: Space.sm) {
-                    CoinIcon(symbol: h.asset.symbol, size: 26)
+                    CoinIcon(symbol: h.asset.symbol, size: side * 0.085)
                     VStack(alignment: .leading, spacing: Space.xxs) {
                         HStack {
                             Text(h.asset.symbol).font(Typo.callout.weight(.medium)).foregroundStyle(Theme.textPrimary)
@@ -256,6 +264,7 @@ struct ShareCard: View {
                         .frame(height: 4)
                     }
                 }
+                .frame(maxHeight: .infinity) // rows share the height evenly
             }
             if list.isEmpty {
                 Text("No public holdings").font(Typo.callout).foregroundStyle(Theme.textSecondary)
@@ -272,7 +281,7 @@ struct ShareCard: View {
                 let up = best.asset.change24h >= 0
                 let tint = up ? Theme.positive : Theme.negative
                 HStack(spacing: Space.sm) {
-                    CoinIcon(symbol: best.asset.symbol, size: 36)
+                    CoinIcon(symbol: best.asset.symbol, size: side * 0.12)
                     VStack(alignment: .leading, spacing: 0) {
                         Text(best.asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                         Text(best.asset.symbol).font(Typo.caption).foregroundStyle(Theme.textSecondary)
@@ -282,7 +291,7 @@ struct ShareCard: View {
                     Text(best.asset.change24h.percent).numeral().foregroundStyle(tint)
                     Text("Best performer today").font(Typo.callout).foregroundStyle(Theme.textSecondary)
                 }
-                MiniArea(values: best.asset.series(.day).map(\.price), tint: tint).frame(height: 56)
+                MiniArea(values: best.asset.series(.day).map(\.price), tint: tint).frame(maxHeight: .infinity)
             } else {
                 Text("No public holdings").font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
