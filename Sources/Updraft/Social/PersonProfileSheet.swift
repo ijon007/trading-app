@@ -1,41 +1,50 @@
 import SwiftUI
 
-/// A friend's profile: returns per period and top holdings (unless they hide them).
-/// Only percentages are shown, never amounts.
-struct FriendProfileSheet: View {
+/// Someone's profile: follow, returns per period, rank, and top holdings
+/// (unless they hide them). Only percentages, never amounts.
+struct PersonProfileSheet: View {
     let profile: SocialProfile
-    @Environment(\.dismiss) private var dismiss
     @State private var period: LeaderPeriod = .day
-    @State private var confirmRemove = false
     private var store: SocialStore { .shared }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: Space.lg) {
-                VStack(spacing: Space.xs) {
-                    SocialAvatar(profile: profile, size: 72)
+            VStack(alignment: .leading, spacing: Space.lg) {
+                HStack(alignment: .top) {
+                    SocialAvatar(size: 72)
+                    Spacer()
+                    if profile.id != store.me.id { FollowButton(id: profile.id) }
+                }
+                VStack(alignment: .leading, spacing: 2) {
                     Text(profile.name).titleStyle().foregroundStyle(Theme.textPrimary)
                     Text(profile.atHandle).font(Typo.callout).foregroundStyle(Theme.textSecondary)
                     if !profile.bio.isEmpty {
-                        Text(profile.bio).font(Typo.callout).foregroundStyle(Theme.textSecondary)
-                            .multilineTextAlignment(.center)
+                        Text(profile.bio).font(Typo.body).foregroundStyle(Theme.textPrimary).padding(.top, Space.xs)
                     }
+                    HStack(spacing: Space.md) {
+                        count(profile.followerCount + (store.isFollowing(profile.id) ? 1 : 0), "Followers")
+                        count(profile.followingCount, "Following")
+                    }
+                    .padding(.top, Space.xs)
                 }
                 .staggered(0)
 
-                VStack(spacing: Space.sm) {
-                    ReturnText(value: profile.returnFor(period), font: Typo.numeral)
-                        .animation(.snappy, value: period)
+                VStack(alignment: .leading, spacing: Space.sm) {
+                    HStack(alignment: .firstTextBaseline) {
+                        ReturnText(value: profile.returnFor(period), font: Typo.numeral)
+                            .animation(.snappy, value: period)
+                        Spacer()
+                        if let rank = store.board(period).first(where: { $0.id == profile.id })?.rank {
+                            Text("#\(rank) in your board")
+                                .font(Typo.caption).foregroundStyle(Theme.textSecondary)
+                                .contentTransition(.numericText(value: Double(rank)))
+                                .animation(.snappy, value: rank)
+                        }
+                    }
                     Picker("Period", selection: $period) {
                         ForEach(LeaderPeriod.allCases) { Text($0.rawValue).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    if let rank = store.board(period).first(where: { $0.id == profile.id })?.rank {
-                        Text("#\(rank) among your friends")
-                            .font(Typo.caption).foregroundStyle(Theme.textSecondary)
-                            .contentTransition(.numericText(value: Double(rank)))
-                            .animation(.snappy, value: rank)
-                    }
                 }
                 .staggered(1)
 
@@ -51,13 +60,21 @@ struct FriendProfileSheet: View {
         .presentationDragIndicator(.visible)
     }
 
-    @ViewBuilder
+    private func count(_ n: Int, _ label: String) -> some View {
+        HStack(spacing: 4) {
+            Text(n.formatted(.number.notation(.compactName))).font(Typo.callout.weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .contentTransition(.numericText(value: Double(n)))
+            Text(label).font(Typo.callout).foregroundStyle(Theme.textSecondary)
+        }
+        .animation(.snappy, value: n)
+    }
+
     private var holdings: some View {
         VStack(alignment: .leading, spacing: Space.sm) {
             Text("Top holdings").font(Typo.headline).foregroundStyle(Theme.textPrimary)
             if profile.hidesHoldings || profile.topHoldings.isEmpty {
-                Label("\(profile.name.split(separator: " ").first.map(String.init) ?? "They") keeps holdings private.",
-                      systemImage: "lock")
+                Label("Holdings are private.", systemImage: "lock")
                     .font(Typo.callout).foregroundStyle(Theme.textSecondary)
             } else {
                 ForEach(profile.topHoldings, id: \.symbol) { h in
