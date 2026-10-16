@@ -11,11 +11,14 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
+                // As a section header, not a row: rows are clipped to the rounded
+                // section shape, which cut off the glass buttons. Zero insets keep
+                // its edges on the cards' edges.
+                Section {} header: {
                     ProfileHeader()
-                        .listRowBackground(Color.clear)
-                        // Zero insets: the header's edges line up with the cards below.
+                        .textCase(nil)
                         .listRowInsets(EdgeInsets())
+                        .padding(.bottom, Space.xs)
                 }
                 .listSectionSpacing(Space.xs)
                 Section("Account") {
