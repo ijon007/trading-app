@@ -15,7 +15,7 @@ struct LeaderboardContent: View {
         let board = store.board(period)
         VStack(spacing: Space.lg) {
             HStack(spacing: Space.xxs) {
-                ForEach(LeaderPeriod.allCases) { p in
+                ForEach(LeaderPeriod.board) { p in
                     Button { period = p } label: {
                         Text(p.rawValue)
                             .font(Typo.callout.weight(.medium))

@@ -3,8 +3,10 @@ import Observation
 
 /// Leaderboard periods. Opens on 1D.
 enum LeaderPeriod: String, CaseIterable, Identifiable, Codable, Sendable {
-    case day = "1D", week = "1W", month = "1M", all = "All"
+    case hour = "1H", day = "1D", week = "1W", month = "1M", all = "All"
     var id: String { rawValue }
+    /// Periods the leaderboard ranks by (1H is only on person profiles).
+    static let board: [LeaderPeriod] = [.day, .week, .month, .all]
 }
 
 /// A person on Updraft: you or someone you can follow. Returns are percentages only.
@@ -31,7 +33,19 @@ struct SocialProfile: Identifiable, Hashable, Codable, Sendable {
     struct Holding: Hashable, Codable, Sendable { let symbol: String; let share: Double }
 
     var atHandle: String { "@" + handle }
-    func returnFor(_ p: LeaderPeriod) -> Double { returns[p] ?? 0 }
+    func returnFor(_ p: LeaderPeriod) -> Double {
+        if let r = returns[p] { return r }
+        return p == .hour ? hourReturn : 0
+    }
+
+    /// Sample 1H return when none is stored: a seeded slice of the day's move,
+    /// usually the same direction, small in size.
+    private var hourReturn: Double {
+        var h: UInt64 = 1469598103934665603
+        for b in (id + "1H").utf8 { h = (h ^ UInt64(b)) &* 1099511628211 }
+        let factor = Double(h % 100) / 100 * 0.32 - 0.08 // -0.08...0.24 of the day
+        return (returns[.day] ?? 0) * factor
+    }
     /// Dollar P&L over the period: value now minus value at the period start.
     func pnlFor(_ p: LeaderPeriod) -> Double { pnl(returnFor(p)) }
     func previousPnlFor(_ p: LeaderPeriod) -> Double { pnl(previousReturns[p] ?? returnFor(p)) }
@@ -82,6 +96,7 @@ struct MockSocialService: SocialService {
     /// 100 × (1 + return), so the line always agrees with the % shown.
     func series(for profile: SocialProfile, period: LeaderPeriod) -> [PricePoint] {
         let (count, step): (Int, TimeInterval) = switch period {
+        case .hour: (60, 60)
         case .day: (96, 900)
         case .week: (84, 7200)
         case .month: (90, 28_800)
@@ -127,7 +142,7 @@ struct MockSocialService: SocialService {
     private static func p(_ id: String, _ name: String, _ handle: String, _ bio: String,
                           _ r: [Double], _ prev: [Double], _ holdings: [(String, Double)],
                           followers: Int, following: Int, hides: Bool = false) -> SocialProfile {
-        let periods = LeaderPeriod.allCases
+        let periods = LeaderPeriod.board
         // Seeded per person so values stay put between launches.
         var seed: UInt64 = 1469598103934665603
         for b in id.utf8 { seed = (seed ^ UInt64(b)) &* 1099511628211 }
@@ -252,7 +267,7 @@ final class SocialStore {
         let now = holdings.reduce(0) { $0 + $1.value }
         let prev = holdings.reduce(0) { $0 + $1.value / (1 + $1.asset.change24h / 100) }
         let day = prev > 0 ? (now - prev) / prev * 100 : 0
-        return [.day: day, .week: change(.week), .month: change(.month), .all: change(.all)]
+        return [.hour: change(.hour), .day: day, .week: change(.week), .month: change(.month), .all: change(.all)]
     }
 
     /// Holdings of your public accounts only (watch-only included), merged by coin.
