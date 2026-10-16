@@ -30,16 +30,16 @@ Native SwiftUI iOS crypto wallet. It's built on Windows + WSL Ubuntu with **xtoo
 | `Models/` | All data and state (see below) |
 
 ## Data
-- **Live market data** is in `Models/MarketData.swift` (`MarketStore`, `@Observable`). It has no API keys and is free.
-  - The Coinbase WebSocket `wss://ws-feed.exchange.coinbase.com` provides live prices.
-  - Coinbase `/products/{id}/candles` provides the chart history.
-  - CoinGecko `/coins/markets` provides the top 100 coins with names, logos, market cap, volume, supply, ATH and rank. CoinGecko is rate-limited, so cache it and don't poll it fast.
-  - Don't use Binance, because it blocks US users.
-- **Accounts** are in `Models/Accounts.swift` (`AccountStore`). A wallet *is* an account, so there are no separate "wallets". Accounts are kept in UserDefaults and support selected and default accounts, plus watch-only accounts (`isWatchOnly`, `address`).
-- **Watch-only** is in `Models/EthereumWatch.swift`. It reads ETH plus a fixed list of top tokens through `ethereum-rpc.publicnode.com` and resolves `.eth` names. It covers Ethereum only.
-- **Keys** are in `Models/WalletService.swift`, which is currently a `MockWalletService` storing phrases in UserDefaults. **That's a mock only.** Real keys must go in the Keychain behind Face ID, and the first version should run on the Sepolia testnet.
-- `Watchlist.swift` holds starred coins in UserDefaults. `SampleData.swift` and `ActivityData.swift` hold sample amounts, transactions and cost basis.
-- Buying, selling and sending are UI only right now, and nothing goes on-chain.
+- **Live market data** (`Models/MarketData.swift`, `MarketStore`, `@Observable`). No API keys.
+  - Coinbase Exchange WebSocket `ticker` on `wss://ws-feed.exchange.coinbase.com` for live prices and 24h open; ticks buffer and flush to UI at most once per second.
+  - Coinbase REST `https://api.exchange.coinbase.com/products/{id}/candles` for chart history (paged).
+  - CoinGecko `GET /coins/markets` (top 100 by market cap, ~every 60s) for names, logos, market cap, volume, supply, ATH, rank, and as a price fallback when the socket is down. Non-Coinbase coins use CoinGecko `market_chart` for candles.
+  - Don't use Binance (blocks US users).
+- **Accounts** (`Models/Accounts.swift`, `AccountStore`). A wallet *is* an account. UserDefaults keys: `accounts.saved.v2` (full ordered list; legacy `accounts.saved.v1` still read), `account.current` (last selected), `account.default` (fallback when the selected account is gone). Supports rename/reorder, transfer between own accounts (`Account.transfer`; watch-only can't be the source), and watch-only (`isWatchOnly`, `address` — can't send/swap). UI: `Home/AccountsDrawer` (tap switcher to bottom drawer; swipe delete / set default; Add account).
+- **Watch-only** (`Models/EthereumWatch.swift`). Batched JSON-RPC to `https://ethereum-rpc.publicnode.com`: `eth_getBalance` (ETH) plus ERC-20 `balanceOf` for USDC, USDT, WBTC, LINK, UNI, SHIB, DAI, PEPE. ENS via `https://api.ensideas.com/ens/resolve/...`. Ethereum only.
+- **Keys** (`Models/WalletService.swift`): `WalletService` protocol; app uses `MockWalletService`. Phrases live in plain UserDefaults as `wallet.mock.phrase.{accountID}` — not Keychain. Fake addresses; no real keys. Demo app passcode is `123456` (`Profile/PasscodeView`, `Components/AppLock`). Real keys must go in Keychain behind Face ID; first on-chain version should be Sepolia.
+- **Other persistence**: `watchlist.v1` (`Watchlist.swift`), `currency`, `privacy.hideAmounts`, `send.recipients.v1`. `SampleData.swift` / `ActivityData.swift` hold sample amounts, transactions and cost basis.
+- Buy, sell and send are UI-only demos (send sleeps ~1s and marks sent); nothing goes on-chain.
 
 ## Design rules
 - **Tokens:** every color, spacing, radius and font comes from `Theme`, `Space`, `Radius` and `Typo`. Match how existing screens style the same thing before inventing a new style. No raw hex colors or magic numbers.
