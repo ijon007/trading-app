@@ -10,6 +10,8 @@ struct EditProfileSheet: View {
     @State private var bio = SocialStore.shared.me.bio
     @State private var photo = SocialStore.shared.photo
     @State private var pickedItem: PhotosPickerItem?
+    @State private var banner = SocialStore.shared.banner
+    @State private var pickedBanner: PhotosPickerItem?
     @FocusState private var focus: Field?
 
     private enum Field { case name, handle, bio }
@@ -22,8 +24,31 @@ struct EditProfileSheet: View {
 
     var body: some View {
         let pickerTitle = photo == nil ? "Add photo" : "Change photo" // PhotosPicker labels are nonisolated
+        let bannerTitle = banner == nil ? "Add banner" : "Change banner"
         NavigationStack {
             Form {
+                Section {
+                    VStack(spacing: Space.sm) {
+                        ProfileBanner(image: banner, seed: SocialStore.shared.me.id + handle, height: 110)
+                            .id(banner?.count ?? 0)
+                            .transition(.opacity)
+                        HStack(spacing: Space.md) {
+                            PhotosPicker(selection: $pickedBanner, matching: .images) { Text(bannerTitle) }
+                            if banner != nil {
+                                Button("Remove", role: .destructive) {
+                                    Haptics.tap()
+                                    withAnimation(.snappy) { banner = nil }
+                                }
+                            }
+                        }
+                        .font(Typo.callout.weight(.medium))
+                        .buttonStyle(.borderless)
+                    }
+                    .animation(.smooth(duration: 0.3), value: banner)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+                }
+
                 Section {
                     VStack(spacing: Space.sm) {
                         SocialAvatar(photo: photo, size: 96)
@@ -105,6 +130,7 @@ struct EditProfileSheet: View {
                 }
             }
             .onChange(of: pickedItem) { _, item in loadPhoto(item) }
+            .onChange(of: pickedBanner) { _, item in loadBanner(item) }
         }
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
@@ -114,6 +140,7 @@ struct EditProfileSheet: View {
     private var hasChanges: Bool {
         let me = SocialStore.shared.me
         return name != me.name || handle != me.handle || bio != me.bio || photo != SocialStore.shared.photo
+            || banner != SocialStore.shared.banner
     }
 
     private var handleNote: String {
@@ -135,6 +162,20 @@ struct EditProfileSheet: View {
         }
     }
 
+    private func loadBanner(_ item: PhotosPickerItem?) {
+        guard let item else { return }
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else { Haptics.error(); return }
+            let scale = min(1200 / image.size.width, 1)
+            let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+            let resized = UIGraphicsImageRenderer(size: size).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+            withAnimation(.smooth(duration: 0.3)) { banner = resized.jpegData(compressionQuality: 0.8) }
+            pickedBanner = nil
+            Haptics.select()
+        }
+    }
+
     private func save() {
         var me = SocialStore.shared.me
         me.name = trimmedName
@@ -142,6 +183,7 @@ struct EditProfileSheet: View {
         me.bio = bio.trimmingCharacters(in: .whitespacesAndNewlines)
         SocialStore.shared.me = me
         SocialStore.shared.photo = photo
+        SocialStore.shared.banner = banner
         Haptics.success()
         dismiss()
     }

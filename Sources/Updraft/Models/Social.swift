@@ -192,6 +192,14 @@ final class SocialStore {
     }
     private static var photoURL: URL { URL.documentsDirectory.appending(path: "social-avatar.jpg") }
 
+    /// Your profile banner (JPEG) in Documents. Nil shows a gradient.
+    var banner: Data? {
+        didSet {
+            if let banner { try? banner.write(to: Self.bannerURL) } else { try? FileManager.default.removeItem(at: Self.bannerURL) }
+        }
+    }
+    private static var bannerURL: URL { URL.documentsDirectory.appending(path: "social-banner.jpg") }
+
     private enum Keys { static let me = "social.me.v2", following = "social.following.v1" }
 
     private init() {
@@ -202,6 +210,7 @@ final class SocialStore {
         me = Self.load(Keys.me) ?? SocialProfile(id: "me", name: base.name, handle: Self.normalized(base.handle))
         following = Self.load(Keys.following) ?? ["f1", "f2", "f3", "f4", "f6"]
         photo = try? Data(contentsOf: Self.photoURL)
+        banner = try? Data(contentsOf: Self.bannerURL)
     }
 
     // MARK: People

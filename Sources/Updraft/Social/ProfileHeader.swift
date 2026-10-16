@@ -10,8 +10,15 @@ struct ProfileHeader: View {
     var body: some View {
         let me = store.meWithStats
         VStack(alignment: .leading, spacing: Space.md) {
+            // Banner with the avatar overlapping its bottom edge; Share sits to the right.
+            ProfileBanner(image: store.banner, seed: me.id + me.handle)
+                .overlay(alignment: .bottomLeading) {
+                    SocialAvatar(photo: store.photo, size: 84)
+                        .background(Circle().stroke(Theme.background, lineWidth: 4))
+                        .offset(x: Space.md, y: 42)
+                }
+                .zIndex(1)
             HStack(alignment: .top) {
-                SocialAvatar(photo: store.photo, size: 84)
                 Spacer()
                 ShareLink(item: store.profileLink, message: Text("Follow me on Updraft: \(me.atHandle)")) {
                     Image(systemName: "square.and.arrow.up")
@@ -24,6 +31,8 @@ struct ProfileHeader: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Share profile")
             }
+            .frame(height: 36)
+            .padding(.top, -Space.xs)
             VStack(alignment: .leading, spacing: 2) {
                 Text(me.name).titleStyle().foregroundStyle(Theme.textPrimary)
                 Text(me.atHandle).font(Typo.callout).foregroundStyle(Theme.textSecondary)

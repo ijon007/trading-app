@@ -11,10 +11,19 @@ struct PersonProfileSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
-                HStack(alignment: .top) {
-                    SocialAvatar(size: 72)
-                    Spacer()
-                    if profile.id != store.me.id { FollowButton(id: profile.id) }
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    ProfileBanner(seed: profile.id + profile.handle, height: 110)
+                        .overlay(alignment: .bottomLeading) {
+                            SocialAvatar(photo: store.photo(for: profile), size: 72)
+                                .background(Circle().stroke(Theme.background, lineWidth: 4))
+                                .offset(x: Space.md, y: 36)
+                        }
+                        .zIndex(1)
+                    HStack {
+                        Spacer()
+                        if profile.id != store.me.id { FollowButton(id: profile.id) }
+                    }
+                    .frame(minHeight: 32)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(profile.name).titleStyle().foregroundStyle(Theme.textPrimary)

@@ -110,6 +110,35 @@ struct CoinStack: View {
     }
 }
 
+/// Wide profile banner, like X: your image, or a soft gradient seeded by id.
+struct ProfileBanner: View {
+    var image: Data? = nil
+    let seed: String
+    var height: CGFloat = 120
+
+    var body: some View {
+        Group {
+            if let image, let ui = UIImage(data: image) {
+                Image(uiImage: ui).resizable().scaledToFill()
+            } else {
+                LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: height)
+        .clipShape(.rect(cornerRadius: Radius.lg))
+        .accessibilityHidden(true)
+    }
+
+    private var colors: [Color] {
+        var h: UInt64 = 1469598103934665603
+        for b in seed.utf8 { h = (h ^ UInt64(b)) &* 1099511628211 }
+        let hue = Double(h % 360) / 360
+        return [Color(hue: hue, saturation: 0.32, brightness: 0.78),
+                Color(hue: (hue + 0.12).truncatingRemainder(dividingBy: 1), saturation: 0.42, brightness: 0.52)]
+    }
+}
+
 /// Follow / Following toggle.
 struct FollowButton: View {
     let id: String
