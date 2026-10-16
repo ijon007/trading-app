@@ -6,6 +6,7 @@ struct ProfileHeader: View {
     private var store: SocialStore { .shared }
     @State private var editing = false
     @State private var list: PeopleList.Kind?
+    @State private var sharing = false
 
     var body: some View {
         let me = store.meWithStats
@@ -20,7 +21,7 @@ struct ProfileHeader: View {
                 .zIndex(1)
             HStack(alignment: .top) {
                 Spacer()
-                ShareLink(item: store.profileLink, message: Text("Follow me on Updraft: \(me.atHandle)")) {
+                Button { Haptics.tap(); sharing = true } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Theme.textPrimary)
@@ -56,6 +57,7 @@ struct ProfileHeader: View {
         .animation(.smooth(duration: 0.3), value: store.me)
         .sheet(isPresented: $editing) { EditProfileSheet() }
         .sheet(item: $list) { PeopleList(kind: $0) }
+        .sheet(isPresented: $sharing) { ProfileShareSheet() }
     }
 
     private func count(_ n: Int, _ label: String, action: @escaping () -> Void) -> some View {
