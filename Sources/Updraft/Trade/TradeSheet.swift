@@ -370,7 +370,9 @@ private struct TradeReviewScreen: View {
             Button(action: confirm) {
                 HStack(spacing: Space.xs) {
                     if phase == .processing {
-                        ProgressView().tint(Theme.background)
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(Theme.background)
                     } else if faceID {
                         Image(systemName: "faceid")
                     }
