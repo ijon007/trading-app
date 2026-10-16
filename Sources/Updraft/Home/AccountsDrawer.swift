@@ -80,7 +80,7 @@ struct AccountsDrawer: View {
                      : "Make sure you've backed up your 12 words. Without them, this account can't be restored.")
             }
         }
-        .presentationDetents([.height(fittedHeight), .large], selection: $detent)
+        .presentationDetents([.height(fittedHeight), .inset], selection: $detent)
         .presentationDragIndicator(.visible)
         .sheet(isPresented: $adding) {
             AddAccountSheet { account in

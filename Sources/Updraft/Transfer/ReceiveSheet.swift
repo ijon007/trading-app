@@ -48,7 +48,7 @@ struct ReceiveSheet: View {
         .onChange(of: holding) { network = holding.asset.networks[0] }
         .sensoryFeedback(.selection, trigger: holding)
         .sensoryFeedback(.selection, trigger: network)
-        .presentationDetents([.large])
+        .presentationDetents([.inset])
         .presentationDragIndicator(.visible)
     }
 

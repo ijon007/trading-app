@@ -185,7 +185,7 @@ struct TradeSheet: View {
         .onChange(of: side) { methodsOpen = false; reset() }
         .onChange(of: isBlockingError) { _, new in if new { shake += 1 } }
         .onAppear { paymentID = paymentID ?? payments.defaultID }
-        .presentationDetents([.large])
+        .presentationDetents([.inset])
         .presentationDragIndicator(.visible)
     }
 

@@ -117,12 +117,12 @@ struct AddAccountSheet: View {
                 }
             }
             .onChange(of: creating) { _, on in
-                if on { withAnimation(.smooth(duration: 0.3)) { detent = .large } }
+                if on { withAnimation(.smooth(duration: 0.3)) { detent = .inset } }
             }
             .sensoryFeedback(.selection, trigger: mode)
             .sensoryFeedback(.selection, trigger: symbol)
         }
-        .presentationDetents([.height(fittedHeight), .large], selection: $detent)
+        .presentationDetents([.height(fittedHeight), .inset], selection: $detent)
         .presentationDragIndicator(.visible)
     }
 

@@ -69,7 +69,7 @@ struct InternalTransferSheet: View {
         .onChange(of: holding) { amountText = "" }
         .sensoryFeedback(.selection, trigger: fromID)
         .sensoryFeedback(.selection, trigger: toID)
-        .presentationDetents([.large])
+        .presentationDetents([.inset])
         .presentationDragIndicator(.visible)
     }
 

@@ -143,7 +143,7 @@ struct CoinSelectorList: View {
                 }
             }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.medium, .inset])
         .presentationDragIndicator(.visible)
     }
 

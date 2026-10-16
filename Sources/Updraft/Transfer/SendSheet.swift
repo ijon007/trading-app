@@ -132,7 +132,7 @@ struct SendSheet: View {
         .sensoryFeedback(.selection, trigger: holding)
         .sensoryFeedback(.selection, trigger: network)
         .sensoryFeedback(.selection, trigger: inFiat)
-        .presentationDetents([.large])
+        .presentationDetents([.inset])
         .presentationDragIndicator(.visible)
     }
 

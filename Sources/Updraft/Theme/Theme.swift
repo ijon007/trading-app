@@ -32,6 +32,11 @@ enum Theme {
     static let radius: CGFloat = Radius.lg
 }
 
+extension PresentationDetent {
+    /// Just short of `.large`, so iOS 26 keeps the floating glass gap at the edges.
+    static let inset = PresentationDetent.fraction(0.92)
+}
+
 extension Color {
     init(hex: UInt32, opacity: Double = 1) {
         self.init(.sRGB,
