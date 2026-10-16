@@ -23,11 +23,22 @@ struct SocialProfile: Identifiable, Hashable, Codable, Sendable {
     var hidesHoldings = false
     var followerCount = 0
     var followingCount = 0
+    /// Current (public) account value. Optional so older saved profiles still decode.
+    var value: Double? = nil
+    /// How many coins they hold in total (for the "N+" in coin stacks).
+    var holdingCount: Int? = nil
 
     struct Holding: Hashable, Codable, Sendable { let symbol: String; let share: Double }
 
     var atHandle: String { "@" + handle }
     func returnFor(_ p: LeaderPeriod) -> Double { returns[p] ?? 0 }
+    /// Dollar P&L over the period: value now minus value at the period start.
+    func pnlFor(_ p: LeaderPeriod) -> Double { pnl(returnFor(p)) }
+    func previousPnlFor(_ p: LeaderPeriod) -> Double { pnl(previousReturns[p] ?? returnFor(p)) }
+    private func pnl(_ r: Double) -> Double {
+        let v = value ?? 0
+        return r <= -100 ? -v : v - v / (1 + r / 100)
+    }
 }
 
 /// One line in the Activity feed.
@@ -110,11 +121,17 @@ struct MockSocialService: SocialService {
                           _ r: [Double], _ prev: [Double], _ holdings: [(String, Double)],
                           followers: Int, following: Int, hides: Bool = false) -> SocialProfile {
         let periods = LeaderPeriod.allCases
+        // Seeded per person so values stay put between launches.
+        var seed: UInt64 = 1469598103934665603
+        for b in id.utf8 { seed = (seed ^ UInt64(b)) &* 1099511628211 }
+        let value = 8_000 + Double(seed % 420_000) + Double(seed % 100) / 100
+        let count = holdings.count + Int((seed >> 8) % 110)
         return SocialProfile(id: id, name: name, handle: handle, bio: bio,
                              returns: Dictionary(uniqueKeysWithValues: zip(periods, r)),
                              previousReturns: Dictionary(uniqueKeysWithValues: zip(periods, prev)),
                              topHoldings: holdings.map { .init(symbol: $0.0, share: $0.1) }, hidesHoldings: hides,
-                             followerCount: followers, followingCount: following)
+                             followerCount: followers, followingCount: following,
+                             value: value, holdingCount: count)
     }
 
     static let samplePeople: [SocialProfile] = [
@@ -247,6 +264,8 @@ final class SocialStore {
                 .map { .init(symbol: $0.asset.id, share: $0.value / total) }
         }
         m.hidesHoldings = !hasPublicAccounts
+        m.value = total
+        m.holdingCount = holdings.filter { $0.amount > 0 }.count
         return m
     }
 
@@ -265,8 +284,9 @@ final class SocialStore {
                 return a.id < b.id
             }
         }
-        let now = ordered { $0.returnFor(period) }
-        let before = ordered { $0.previousReturns[period] ?? $0.returnFor(period) }
+        // Ranked by dollar P&L, the number every row shows.
+        let now = ordered { $0.pnlFor(period) }
+        let before = ordered { $0.previousPnlFor(period) }
         return now.enumerated().map { i, p in
             let prev = before.firstIndex { $0.id == p.id } ?? i
             return Ranked(rank: i + 1, change: prev - i, profile: p, isMe: p.id == me.id)

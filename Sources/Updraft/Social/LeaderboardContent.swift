@@ -100,7 +100,7 @@ struct LeaderboardContent: View {
                 .font(Typo.callout.weight(.medium))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
-            ReturnText(value: entry.profile.returnFor(period))
+            PnLText(value: entry.profile.pnlFor(period), font: Typo.caption.weight(.medium))
                 .animation(.snappy, value: period)
             UnevenRoundedRectangle(topLeadingRadius: Radius.md, topTrailingRadius: Radius.md)
                 .fill(Theme.surface)
@@ -118,7 +118,7 @@ struct LeaderboardContent: View {
         .contentShape(Rectangle())
         .onTapGesture { if !entry.isMe { select(entry.profile) } }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Rank \(entry.rank), \(entry.isMe ? "you" : entry.profile.name), \(entry.profile.returnFor(period).percent)")
+        .accessibilityLabel("Rank \(entry.rank), \(entry.isMe ? "you" : entry.profile.name), \(entry.profile.pnlFor(period).fiat)")
     }
 
     // MARK: Rows
@@ -137,7 +137,7 @@ struct LeaderboardContent: View {
             }
             Spacer()
             RankChange(change: entry.change)
-            ReturnText(value: entry.profile.returnFor(period))
+            PnLText(value: entry.profile.pnlFor(period), font: Typo.headline)
                 .frame(minWidth: 64, alignment: .trailing)
         }
         .padding(.vertical, Space.sm)

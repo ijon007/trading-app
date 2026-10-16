@@ -32,7 +32,9 @@ struct PersonProfileSheet: View {
 
                 VStack(alignment: .leading, spacing: Space.sm) {
                     HStack(alignment: .firstTextBaseline) {
-                        ReturnText(value: profile.returnFor(period), font: Typo.numeral)
+                        PnLText(value: profile.pnlFor(period), font: Typo.numeral)
+                            .animation(.snappy, value: period)
+                        ReturnText(value: profile.returnFor(period), font: Typo.caption)
                             .animation(.snappy, value: period)
                         Spacer()
                         if let rank = store.board(period).first(where: { $0.id == profile.id })?.rank {

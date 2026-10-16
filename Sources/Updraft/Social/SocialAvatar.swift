@@ -63,6 +63,23 @@ struct ReturnText: View {
     }
 }
 
+/// Signed dollar P&L (+$46,537.92), tinted up/down, hidden in privacy mode.
+struct PnLText: View {
+    let value: Double
+    var font: Font = Typo.figure
+
+    var body: some View {
+        Text((value >= 0 ? "+" : "-") + abs(value).fiat)
+            .font(font)
+            .monospacedDigit()
+            .foregroundStyle(value >= 0 ? Theme.positive : Theme.negative)
+            .contentTransition(.numericText(value: value))
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .privateAmount()
+    }
+}
+
 /// Follow / Following toggle.
 struct FollowButton: View {
     let id: String
