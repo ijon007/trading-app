@@ -167,7 +167,8 @@ struct FollowButton: View {
         .padding(.vertical, 6)
         .foregroundStyle(following ? Theme.textPrimary : Theme.background)
         .background(following ? Color.clear : Theme.textPrimary, in: .capsule)
-        .overlay(Capsule().strokeBorder(following ? Theme.hairline : .clear))
+        // Adaptive neutral: dark-ish on light, light-ish on dark, visible on glass.
+        .overlay(Capsule().strokeBorder(following ? Color.primary.opacity(0.22) : .clear, lineWidth: 1))
         .animation(.snappy(duration: 0.25), value: following)
         .accessibilityLabel(following ? "Following. Double tap to unfollow." : "Follow")
     }
