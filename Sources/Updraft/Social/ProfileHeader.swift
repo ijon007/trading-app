@@ -77,7 +77,7 @@ struct PeopleList: View {
                 PersonRow(profile: p) { FollowButton(id: p.id) }
                     .onTapGesture { Haptics.tap(); selected = p }
                     .listRowBackground(Color.clear)
-                    .listRowSeparatorTint(Theme.hairline)
+                    .listRowSeparator(.hidden)
             }
             .listStyle(.plain)
             .overlay {
