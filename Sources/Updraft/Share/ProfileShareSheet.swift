@@ -182,7 +182,6 @@ struct ShareCard: View {
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
-            footer
         }
         .padding(side * 0.065)
         .frame(width: side, height: side, alignment: .topLeading)
@@ -200,16 +199,13 @@ struct ShareCard: View {
                 Text(store.me.atHandle).font(Typo.caption).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
+            // Watermark, trailing in the header row.
+            HStack(spacing: Space.xxs) {
+                UpdraftLogoShape().frame(width: 12, height: 16)
+                Text("Updraft").font(Typo.caption.weight(.medium))
+            }
+            .foregroundStyle(Theme.textTertiary)
         }
-    }
-
-    private var footer: some View {
-        HStack(spacing: Space.xxs) {
-            UpdraftLogoShape().frame(width: 12, height: 16)
-            Text("Updraft").font(Typo.caption.weight(.medium))
-            Spacer()
-        }
-        .foregroundStyle(Theme.textTertiary)
     }
 
 
