@@ -41,6 +41,7 @@ struct ReceiveSheet: View {
             .scrollIndicators(.hidden)
             .bounceWhenOverflows()
             .measureDrawer()
+            .background(Theme.background)
             .navigationTitle("Receive")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -52,7 +53,7 @@ struct ReceiveSheet: View {
         .onChange(of: holding) { network = holding.asset.networks[0] }
         .sensoryFeedback(.selection, trigger: holding)
         .sensoryFeedback(.selection, trigger: network)
-        .fittedDrawer(height: $fittedHeight, detent: $detent)
+        .fittedDrawer(height: $fittedHeight, detent: $detent, opaque: true)
     }
 
     private var qrCode: some View {

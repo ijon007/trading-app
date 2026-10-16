@@ -67,11 +67,20 @@ extension View {
     }
 
     /// Sizes a drawer to its scroll content. Pair with `measureDrawer()` on the ScrollView.
-    func fittedDrawer(height: Binding<CGFloat>, detent: Binding<PresentationDetent>) -> some View {
-        self
+    /// `opaque` keeps the old full-bleed white sheet instead of iOS 26 floating glass.
+    @ViewBuilder
+    func fittedDrawer(height: Binding<CGFloat>, detent: Binding<PresentationDetent>, opaque: Bool = false) -> some View {
+        let sheet = self
             .environment(\.drawerFit, DrawerFit(height: height, detent: detent))
             .presentationDetents([.height(height.wrappedValue)], selection: detent)
             .presentationDragIndicator(.visible)
+        if opaque {
+            sheet
+                .presentationBackground(Theme.background)
+                .presentationCornerRadius(10)
+        } else {
+            sheet
+        }
     }
 
     /// Reports this scroll view's content height to the enclosing `fittedDrawer`.

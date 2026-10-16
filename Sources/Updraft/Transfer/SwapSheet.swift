@@ -55,6 +55,7 @@ struct SwapSheet: View {
             .bounceWhenOverflows()
             .measureDrawer()
             .scrollDismissesKeyboard(.immediately)
+            .background(Theme.background)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Swap")
             .navigationBarTitleDisplayMode(.inline)
@@ -75,7 +76,7 @@ struct SwapSheet: View {
         }
         .sensoryFeedback(.selection, trigger: from)
         .sensoryFeedback(.selection, trigger: to)
-        .fittedDrawer(height: $fittedHeight, detent: $detent)
+        .fittedDrawer(height: $fittedHeight, detent: $detent, opaque: true)
     }
 
     private func holdingForTo(_ asset: Asset) -> Holding {

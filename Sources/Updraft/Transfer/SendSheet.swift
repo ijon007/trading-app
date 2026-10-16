@@ -113,6 +113,7 @@ struct SendSheet: View {
             .bounceWhenOverflows()
             .measureDrawer()
             .scrollDismissesKeyboard(.immediately)
+            .background(Theme.background)
             .safeAreaInset(edge: .bottom) { reviewButton }
             .navigationTitle("Send")
             .navigationBarTitleDisplayMode(.inline)
@@ -136,7 +137,7 @@ struct SendSheet: View {
         .sensoryFeedback(.selection, trigger: holding)
         .sensoryFeedback(.selection, trigger: network)
         .sensoryFeedback(.selection, trigger: inFiat)
-        .fittedDrawer(height: $fittedHeight, detent: $detent)
+        .fittedDrawer(height: $fittedHeight, detent: $detent, opaque: true)
     }
 
     // MARK: Recipient
