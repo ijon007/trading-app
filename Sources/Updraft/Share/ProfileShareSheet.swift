@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import Photos
 
 /// Share your profile as an image: swipe between Portfolio, Top holdings and
 /// Top mover cards, then share, copy or save the one on screen.
@@ -64,7 +65,13 @@ struct ProfileShareSheet: View {
                 action("Share", "square.and.arrow.up").opacity(0.4)
             }
             Button { copy() } label: { action(feedback == "Copied" ? "Copied" : "Copy", feedback == "Copied" ? "checkmark" : "doc.on.doc") }
-            Button { save() } label: { action(feedback == "Saved" ? "Saved" : "Save", feedback == "Saved" ? "checkmark" : "arrow.down.to.line") }
+            Button { save() } label: {
+                switch feedback {
+                case "Saved": action("Saved", "checkmark")
+                case "No access": action("No access", "exclamationmark.triangle")
+                default: action("Save", "arrow.down.to.line")
+                }
+            }
         }
         .buttonStyle(.plain)
         .disabled(rendered == nil)
@@ -101,14 +108,28 @@ struct ProfileShareSheet: View {
         flash("Copied")
     }
 
+    /// Asks for add-only Photos access; says so when it's denied instead of faking "Saved".
     private func save() {
         guard let rendered else { return }
-        UIImageWriteToSavedPhotosAlbum(rendered, nil, nil, nil)
-        flash("Saved")
+        Task {
+            let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+            guard status == .authorized || status == .limited else {
+                flash("No access", success: false)
+                return
+            }
+            do {
+                try await PHPhotoLibrary.shared().performChanges {
+                    PHAssetChangeRequest.creationRequestForAsset(from: rendered)
+                }
+                flash("Saved")
+            } catch {
+                flash("No access", success: false)
+            }
+        }
     }
 
-    private func flash(_ text: String) {
-        Haptics.success()
+    private func flash(_ text: String, success: Bool = true) {
+        if success { Haptics.success() } else { Haptics.error() }
         feedback = text
         Task {
             try? await Task.sleep(for: .seconds(1.6))
