@@ -2,7 +2,8 @@ import SwiftUI
 import UIKit
 
 /// Installs one window-level tap recognizer that ends editing when the user taps
-/// anywhere outside a text input. It never cancels or delays touches, so buttons,
+/// anywhere outside a text input, and closes an inset drawer when the tap lands
+/// on empty space around it. It never cancels or delays touches, so buttons,
 /// rows and gestures underneath behave exactly as before. Covers sheets too,
 /// since they present in the same window.
 struct KeyboardDismissal: UIViewRepresentable {
@@ -38,7 +39,43 @@ struct KeyboardDismissal: UIViewRepresentable {
             window.addGestureRecognizer(tap)
         }
 
-        @objc private func tapped() { window?.endEditing(true) }
+        @objc private func tapped(_ g: UITapGestureRecognizer) {
+            // Keyboard first: a tap that only meant to end editing shouldn't also
+            // close the drawer the user is filling in.
+            let hidKeyboard = window?.endEditing(true) == true
+            guard !hidKeyboard, KeyboardDismissal.isEnabled else { return }
+            dismissDrawerIfEmptySpace(g)
+        }
+
+        /// Closes the topmost sheet when the tap is on the dimming view or in the
+        /// gap around an inset liquid-glass drawer — not when it hits the sheet.
+        private func dismissDrawerIfEmptySpace(_ g: UITapGestureRecognizer) {
+            guard let window, let sheet = topPresentedSheet(in: window) else { return }
+            let point = g.location(in: window)
+            let card = sheet.view.convert(sheet.view.bounds, to: window)
+            let hit = window.hitTest(point, with: nil)
+            let outside = !card.insetBy(dx: 1, dy: 1).contains(point)
+            if outside || isDimming(hit) {
+                sheet.dismiss(animated: true)
+            }
+        }
+
+        private func topPresentedSheet(in window: UIWindow) -> UIViewController? {
+            var top = window.rootViewController
+            while let next = top?.presentedViewController { top = next }
+            guard let sheet = top, sheet !== window.rootViewController else { return nil }
+            if sheet is UIAlertController { return nil }
+            return sheet
+        }
+
+        private func isDimming(_ view: UIView?) -> Bool {
+            var current = view
+            while let v = current {
+                if NSStringFromClass(type(of: v)).localizedCaseInsensitiveContains("Dimming") { return true }
+                current = v.superview
+            }
+            return false
+        }
 
         nonisolated func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
 
