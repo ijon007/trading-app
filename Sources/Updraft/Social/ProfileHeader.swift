@@ -16,11 +16,12 @@ struct ProfileHeader: View {
                 ShareLink(item: store.profileLink, message: Text("Follow me on Updraft: \(me.atHandle)")) {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 16, weight: .medium))
-                        .frame(width: 22, height: 22)
+                        .foregroundStyle(Theme.textPrimary)
+                        .offset(y: -1) // optical centering: the arrow sits low
+                        .frame(width: 36, height: 36)
+                        .glassEffect(.regular.interactive(), in: .circle)
                 }
-                .glassCircleButton()
-                .controlSize(.regular)
-                .tint(Theme.textPrimary)
+                .buttonStyle(.plain)
                 .accessibilityLabel("Share profile")
             }
             VStack(alignment: .leading, spacing: 2) {
@@ -35,7 +36,9 @@ struct ProfileHeader: View {
                 count(me.followingCount, "Following") { list = .following }
             }
             Button { Haptics.tap(); editing = true } label: {
-                Text("Edit profile").font(Typo.callout.weight(.medium)).frame(maxWidth: .infinity)
+                Label("Edit profile", systemImage: "pencil")
+                    .font(Typo.callout.weight(.medium))
+                    .frame(maxWidth: .infinity)
             }
             .glassButton()
             .tint(Theme.textPrimary)
