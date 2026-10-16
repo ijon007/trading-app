@@ -16,10 +16,16 @@ struct ProfileShareSheet: View {
     @State private var page: Kind = .portfolio
     @State private var rendered: UIImage?
     @State private var feedback: String?
+    @State private var height: CGFloat = 520
 
     var body: some View {
         VStack(spacing: Space.md) {
-            Text("Share").font(Typo.headline).foregroundStyle(Theme.textPrimary)
+            // Card title lives here, not on the card; follows the swipe.
+            Text(page.rawValue)
+                .font(Typo.headline)
+                .foregroundStyle(Theme.textPrimary)
+                .contentTransition(.opacity)
+                .animation(.snappy, value: page)
                 .padding(.top, Space.lg)
 
             TabView(selection: $page) {
@@ -30,7 +36,7 @@ struct ProfileShareSheet: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: ShareCard.size.height + Space.lg)
+            .frame(height: ShareCard.size.height + Space.md)
 
             HStack(spacing: Space.xs) {
                 ForEach(Kind.allCases) { kind in
@@ -41,20 +47,23 @@ struct ProfileShareSheet: View {
             }
             .animation(.snappy, value: page)
 
-            Spacer(minLength: 0)
             actions
         }
         .padding(.horizontal, Space.md)
-        .padding(.bottom, Space.md)
+        .padding(.bottom, Space.xs)
+        .fixedSize(horizontal: false, vertical: true)
+        // Drawer as tall as title + card + dots + buttons.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0.rounded() }
+        .frame(maxHeight: .infinity, alignment: .top)
         .background(Theme.background)
         .sensoryFeedback(.selection, trigger: page)
         .task(id: "\(page.rawValue)|\(privacyOn)|\(scheme == .dark)") { render() }
-        .presentationDetents([.large])
+        .presentationDetents([.height(height)])
         .presentationDragIndicator(.visible)
     }
 
     private var actions: some View {
-        HStack(spacing: Space.sm) {
+        HStack(spacing: Space.lg) {
             if let rendered {
                 let image = Image(uiImage: rendered)
                 ShareLink(item: image, preview: SharePreview("My Updraft \(page.rawValue.lowercased())", image: image)) {
@@ -88,7 +97,7 @@ struct ProfileShareSheet: View {
                 .contentTransition(.opacity)
         }
         .foregroundStyle(Theme.textPrimary)
-        .frame(maxWidth: .infinity)
+        .frame(width: 64) // fixed width so the group stays centered as labels change
         .animation(.snappy, value: title)
     }
 
@@ -142,7 +151,7 @@ struct ProfileShareSheet: View {
 struct ShareCard: View {
     let kind: ProfileShareSheet.Kind
     var hideAmounts = false
-    static let size = CGSize(width: 300, height: 380)
+    static let size = CGSize(width: 300, height: 300)
     private var store: SocialStore { .shared }
 
     var body: some View {
@@ -154,7 +163,6 @@ struct ShareCard: View {
             case .mover: mover
             }
             Spacer(minLength: 0)
-            footer
         }
         .padding(Space.lg)
         .frame(width: Self.size.width, height: Self.size.height, alignment: .topLeading)
@@ -167,7 +175,7 @@ struct ShareCard: View {
             SocialAvatar(photo: store.photo, size: 32)
             VStack(alignment: .leading, spacing: 0) {
                 Text(store.me.name).font(Typo.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
-                Text(kind.rawValue).font(Typo.caption).foregroundStyle(Theme.textSecondary)
+                Text(store.me.atHandle).font(Typo.caption).foregroundStyle(Theme.textSecondary)
             }
             Spacer()
             HStack(spacing: Space.xxs) {
@@ -178,11 +186,6 @@ struct ShareCard: View {
         }
     }
 
-    private var footer: some View {
-        Text("updraft.app/u/\(store.me.handle)")
-            .font(Typo.caption)
-            .foregroundStyle(Theme.textTertiary)
-    }
 
     private var publicHoldings: [Holding] { store.publicHoldings.filter { $0.value > 0 } }
 
@@ -194,14 +197,14 @@ struct ShareCard: View {
         let change = store.myReturns()[.day] ?? 0
         let pnl = total - total / (1 + change / 100)
         let tint = change >= 0 ? Theme.positive : Theme.negative
-        return VStack(alignment: .leading, spacing: Space.md) {
+        return VStack(alignment: .leading, spacing: Space.sm) {
             VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(hideAmounts ? change.percent : (pnl >= 0 ? "+" : "−") + abs(pnl).fiat)
                     .numeral().foregroundStyle(tint).lineLimit(1).minimumScaleFactor(0.6)
                 Text(hideAmounts ? "Today" : "\(change.percent) today")
                     .font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
-            MiniArea(values: points, tint: tint).frame(height: 120)
+            MiniArea(values: points, tint: tint).frame(height: 76)
             if !hideAmounts {
                 LabeledContent("Balance") { Text(total.fiat).foregroundStyle(Theme.textPrimary) }
                     .font(Typo.callout).foregroundStyle(Theme.textSecondary)
@@ -215,10 +218,10 @@ struct ShareCard: View {
         let list = publicHoldings.sorted { $0.value > $1.value }
         let total = max(list.reduce(0) { $0 + $1.value }, 1)
         return VStack(alignment: .leading, spacing: Space.sm) {
-            ForEach(list.prefix(5), id: \.asset.id) { h in
+            ForEach(list.prefix(4), id: \.asset.id) { h in
                 let share = h.value / total
                 HStack(spacing: Space.sm) {
-                    CoinIcon(symbol: h.asset.symbol, size: 28)
+                    CoinIcon(symbol: h.asset.symbol, size: 26)
                     VStack(alignment: .leading, spacing: Space.xxs) {
                         HStack {
                             Text(h.asset.symbol).font(Typo.callout.weight(.medium)).foregroundStyle(Theme.textPrimary)
@@ -246,12 +249,12 @@ struct ShareCard: View {
 
     private var mover: some View {
         let best = publicHoldings.max { $0.asset.change24h < $1.asset.change24h }
-        return VStack(alignment: .leading, spacing: Space.md) {
+        return VStack(alignment: .leading, spacing: Space.sm) {
             if let best {
                 let up = best.asset.change24h >= 0
                 let tint = up ? Theme.positive : Theme.negative
                 HStack(spacing: Space.sm) {
-                    CoinIcon(symbol: best.asset.symbol, size: 44)
+                    CoinIcon(symbol: best.asset.symbol, size: 36)
                     VStack(alignment: .leading, spacing: 0) {
                         Text(best.asset.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                         Text(best.asset.symbol).font(Typo.caption).foregroundStyle(Theme.textSecondary)
@@ -261,7 +264,7 @@ struct ShareCard: View {
                     Text(best.asset.change24h.percent).numeral().foregroundStyle(tint)
                     Text("Best performer today").font(Typo.callout).foregroundStyle(Theme.textSecondary)
                 }
-                MiniArea(values: best.asset.series(.day).map(\.price), tint: tint).frame(height: 90)
+                MiniArea(values: best.asset.series(.day).map(\.price), tint: tint).frame(height: 56)
             } else {
                 Text("No public holdings").font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
