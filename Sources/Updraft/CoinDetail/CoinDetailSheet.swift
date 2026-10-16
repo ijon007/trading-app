@@ -4,17 +4,9 @@ import Charts
 /// Coin detail presented as a native glass sheet.
 struct CoinDetailSheet: View {
     private let seed: Asset
+    /// Live view of the coin (price and 24h change follow the market).
+    private var asset: Asset { SampleData.assets.first { $0.id == seed.id } ?? seed }
     init(asset: Asset) { seed = asset }
-
-    var body: some View {
-        // Live view of the coin, resolved once per render: building the market
-        // list is expensive and the content reads the asset dozens of times.
-        CoinDetailContent(asset: SampleData.assets.first { $0.id == seed.id } ?? seed)
-    }
-}
-
-private struct CoinDetailContent: View {
-    let asset: Asset
     @State private var timeframe: Timeframe = .hour
     @State private var selectedDate: Date?
     @State private var trade: TradeSide?
@@ -141,8 +133,6 @@ private struct CoinDetailContent: View {
     // MARK: Chart
 
     private var chart: some View {
-        let points = points
-        let selected = selected
         let prices = points.map(\.price)
         let lo = prices.min() ?? 0, hi = prices.max() ?? 1
         let pad = (hi - lo) * 0.08
