@@ -1,4 +1,7 @@
 import SwiftUI
+import os
+
+private let log = Logger(subsystem: "com.ijon007.Updraft", category: "ProfileHeader")
 
 /// Profile header, left-aligned: photo, name, @handle, bio, follower counts,
 /// Edit profile. Share sits top-right.
@@ -36,15 +39,16 @@ struct ProfileHeader: View {
                 .zIndex(1)
             HStack(alignment: .top) {
                 Spacer()
-                Button { Haptics.tap(); sheet = .share } label: {
+                Button { open(.share) } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(Theme.textPrimary)
                         .offset(y: -1) // optical centering: the arrow sits low
                         .frame(width: 36, height: 36)
                         .glassEffect(.regular.interactive(), in: .circle)
+                        .contentShape(.circle)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.borderless)
                 .accessibilityLabel("Share profile")
             }
             .frame(height: 36)
@@ -57,31 +61,42 @@ struct ProfileHeader: View {
                 }
             }
             HStack(spacing: Space.md) {
-                count(me.followerCount, "Followers") { sheet = .followers }
-                count(me.followingCount, "Following") { sheet = .following }
+                count(me.followerCount, "Followers") { open(.followers) }
+                count(me.followingCount, "Following") { open(.following) }
             }
-            Button { Haptics.tap(); sheet = .edit } label: {
+            // Borderless + glass background instead of the glass button style:
+            // in a List row, only borderless buttons get their own taps.
+            Button { open(.edit) } label: {
                 Label("Edit profile", systemImage: "pencil.line")
                     .font(Typo.callout.weight(.medium))
-                    .frame(maxWidth: .infinity)
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .glassEffect(.regular.interactive(), in: .capsule)
+                    .contentShape(.capsule)
             }
-            .glassButton()
-            .tint(Theme.textPrimary)
+            .buttonStyle(.borderless)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.smooth(duration: 0.3), value: store.me)
     }
 
+    private func open(_ s: Sheet) {
+        log.debug("tap \(s.rawValue, privacy: .public)")
+        Haptics.tap()
+        sheet = s
+    }
+
     private func count(_ n: Int, _ label: String, action: @escaping () -> Void) -> some View {
-        Button { Haptics.tap(); action() } label: {
+        Button { action() } label: {
             HStack(spacing: 4) {
                 Text(n.formatted(.number.notation(.compactName)))
                     .font(Typo.callout.weight(.semibold)).foregroundStyle(Theme.textPrimary)
                     .contentTransition(.numericText(value: Double(n)))
                 Text(label).font(Typo.callout).foregroundStyle(Theme.textSecondary)
             }
+            .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.borderless)
         .animation(.snappy, value: n)
     }
 }
