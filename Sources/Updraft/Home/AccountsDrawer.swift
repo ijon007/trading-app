@@ -33,8 +33,13 @@ struct AccountsDrawer: View {
                                 Button("Default", systemImage: "star") { setDefault(account) }
                                     .tint(Theme.textSecondary)
                             }
+                            Button(account.isPrivate ? "Public" : "Private",
+                                   systemImage: account.isPrivate ? "lock.open" : "lock") { togglePrivate(account) }
+                                .tint(Theme.textTertiary)
                         }
                         .contextMenu {
+                            Button(account.isPrivate ? "Make public" : "Make private",
+                                   systemImage: account.isPrivate ? "lock.open" : "lock") { togglePrivate(account) }
                             if !account.isDefault {
                                 Button("Set as default", systemImage: "star") { setDefault(account) }
                             }
@@ -111,6 +116,12 @@ struct AccountsDrawer: View {
                 HStack(spacing: Space.xxs) {
                     Text(account.name).font(Typo.headline).foregroundStyle(Theme.textPrimary).lineLimit(1)
                     if account.isDefault { AccountBadge(text: "Default") }
+                    if account.isPrivate {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Theme.textTertiary)
+                            .accessibilityLabel("Private")
+                    }
                     if account.isWatchOnly { AccountBadge(text: "Watch", icon: "eye") }
                 }
                 if let address = account.address {
@@ -133,6 +144,14 @@ struct AccountsDrawer: View {
         Haptics.select()
         withAnimation(.spring(duration: 0.45, bounce: 0)) { accountID = account.id }
         dismiss()
+    }
+
+    /// Private accounts stay out of your social stats (leaderboard, profile).
+    private func togglePrivate(_ account: Account) {
+        Haptics.select()
+        var updated = account
+        updated.isPrivate.toggle()
+        withAnimation(.snappy) { Account.update(updated) }
     }
 
     private func setDefault(_ account: Account) {

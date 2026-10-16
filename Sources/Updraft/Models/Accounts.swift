@@ -19,6 +19,8 @@ struct Account: Identifiable, Hashable, Sendable {
     var color: String? = nil
     /// Emoji avatar; replaces the symbol when set.
     var emoji: String? = nil
+    /// Private accounts are left out of everything others see (social stats).
+    var isPrivate: Bool = false
 
     var kind: Kind { isWatchOnly ? .watch : .owned }
     var isWatch: Bool { isWatchOnly }
@@ -67,13 +69,14 @@ final class AccountStore: @unchecked Sendable {
         let holdings: [Amount]
         var color: String?
         var emoji: String?
+        var isPrivate: Bool?
     }
 
     private func save() {
         let stored = accounts.map { a in
             Stored(id: a.id, name: a.name, symbol: a.symbol, kind: a.kind, address: a.address,
                    holdings: a.holdings.map { .init(symbol: $0.asset.id, amount: $0.amount) },
-                   color: a.color, emoji: a.emoji)
+                   color: a.color, emoji: a.emoji, isPrivate: a.isPrivate)
         }
         if let data = try? JSONEncoder().encode(stored) {
             UserDefaults.standard.set(data, forKey: Self.fileKey)
@@ -86,7 +89,7 @@ final class AccountStore: @unchecked Sendable {
         return stored.map { s in
             Account(id: s.id, name: s.name, symbol: s.symbol,
                     holdings: s.holdings.map { Holding(asset: SampleData.asset($0.symbol), amount: $0.amount) },
-                    isWatchOnly: s.kind == .watch, address: s.address, color: s.color, emoji: s.emoji)
+                    isWatchOnly: s.kind == .watch, address: s.address, color: s.color, emoji: s.emoji, isPrivate: s.isPrivate ?? false)
         }
     }
 }

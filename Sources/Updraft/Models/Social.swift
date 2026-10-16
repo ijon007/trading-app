@@ -210,13 +210,29 @@ final class SocialStore {
     /// Your returns come from the current account: 1D is the live 24h change,
     /// longer periods follow the balance history.
     func myReturns() -> [LeaderPeriod: Double] {
+        let holdings = publicHoldings
         func change(_ t: Timeframe) -> Double {
-            let s = SampleData.balanceSeries(t)
+            let s = SampleData.balanceSeries(t, holdings: holdings)
             guard let first = s.first?.price, let last = s.last?.price, first > 0 else { return 0 }
             return (last - first) / first * 100
         }
-        return [.day: SampleData.totalChange24h, .week: change(.week), .month: change(.month), .all: change(.all)]
+        let now = holdings.reduce(0) { $0 + $1.value }
+        let prev = holdings.reduce(0) { $0 + $1.value / (1 + $1.asset.change24h / 100) }
+        let day = prev > 0 ? (now - prev) / prev * 100 : 0
+        return [.day: day, .week: change(.week), .month: change(.month), .all: change(.all)]
     }
+
+    /// Holdings of your public accounts only (watch-only included), merged by coin.
+    var publicHoldings: [Holding] {
+        var amounts: [String: Double] = [:]
+        for account in Account.all where !account.isPrivate {
+            for h in account.holdings { amounts[h.asset.id, default: 0] += h.amount }
+        }
+        return amounts.map { Holding(asset: SampleData.asset($0.key), amount: $0.value) }.sorted { $0.asset.id < $1.asset.id }
+    }
+
+    /// False when every account is private: others see a Private state.
+    var hasPublicAccounts: Bool { Account.all.contains { !$0.isPrivate } }
 
     var meWithStats: SocialProfile {
         var m = me
@@ -224,11 +240,13 @@ final class SocialStore {
         m.previousReturns = m.returns.mapValues { $0 * 0.9 }
         m.followerCount = followerIDs.count
         m.followingCount = following.count
-        let total = SampleData.totalBalance
+        let holdings = publicHoldings
+        let total = holdings.reduce(0) { $0 + $1.value }
         if total > 0 {
-            m.topHoldings = SampleData.holdings.sorted { $0.value > $1.value }.prefix(3)
+            m.topHoldings = holdings.sorted { $0.value > $1.value }.prefix(3)
                 .map { .init(symbol: $0.asset.id, share: $0.value / total) }
         }
+        m.hidesHoldings = !hasPublicAccounts
         return m
     }
 
@@ -236,7 +254,8 @@ final class SocialStore {
 
     /// You plus everyone you follow, ranked by return.
     func board(_ period: LeaderPeriod) -> [Ranked] {
-        let all = [meWithStats] + followingPeople
+        // Private (no public accounts): you're left off the board.
+        let all = (hasPublicAccounts ? [meWithStats] : []) + followingPeople
         let now = all.sorted { $0.returnFor(period) > $1.returnFor(period) }
         let before = all.sorted { ($0.previousReturns[period] ?? 0) > ($1.previousReturns[period] ?? 0) }
         return now.enumerated().map { i, p in
