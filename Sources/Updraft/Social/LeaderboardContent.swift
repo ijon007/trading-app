@@ -105,6 +105,13 @@ struct LeaderboardContent: View {
             if !entry.profile.hidesHoldings, !entry.profile.topHoldings.isEmpty {
                 CoinStack(symbols: entry.profile.topHoldings.map(\.symbol), total: entry.profile.holdingCount,
                           size: place == 0 ? 20 : 18)
+            } else {
+                // Private holdings: a quiet lock keeps the column the same shape.
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(height: place == 0 ? 20 : 18)
+                    .accessibilityLabel("Holdings private")
             }
             UnevenRoundedRectangle(topLeadingRadius: Radius.md, topTrailingRadius: Radius.md)
                 .fill(Theme.surface)
