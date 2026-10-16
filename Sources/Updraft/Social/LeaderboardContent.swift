@@ -102,6 +102,10 @@ struct LeaderboardContent: View {
                 .lineLimit(1)
             PnLText(value: entry.profile.pnlFor(period), font: Typo.caption.weight(.medium))
                 .animation(.snappy, value: period)
+            if !entry.profile.hidesHoldings, !entry.profile.topHoldings.isEmpty {
+                CoinStack(symbols: entry.profile.topHoldings.map(\.symbol), total: entry.profile.holdingCount,
+                          size: place == 0 ? 20 : 18)
+            }
             UnevenRoundedRectangle(topLeadingRadius: Radius.md, topTrailingRadius: Radius.md)
                 .fill(Theme.surface)
                 .overlay(alignment: .top) {
