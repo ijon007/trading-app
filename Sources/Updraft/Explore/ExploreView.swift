@@ -202,10 +202,15 @@ struct GainerCard: View {
                 .minimumScaleFactor(0.7)
                 .fixedSize(horizontal: true, vertical: false)
                 .padding(.top, Space.sm)
-            Sparkline(values: asset.sparkline)
-                .stroke(tint, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-                .frame(height: 26)
-                .padding(.vertical, Space.xs)
+            ZStack {
+                SparklineArea(values: asset.sparkline)
+                    .fill(LinearGradient(colors: [tint.opacity(0.22), tint.opacity(0)],
+                                         startPoint: .top, endPoint: .bottom))
+                Sparkline(values: asset.sparkline)
+                    .stroke(tint, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+            }
+            .frame(height: 26)
+            .padding(.vertical, Space.xs)
             Spacer(minLength: 0)
             Text(asset.price.fiat)
                 .font(Typo.figure)

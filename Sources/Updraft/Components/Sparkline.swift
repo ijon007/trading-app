@@ -17,6 +17,20 @@ struct Sparkline: Shape {
     }
 }
 
+/// Same points as `Sparkline`, closed to the bottom of the frame for an area fill.
+struct SparklineArea: Shape {
+    let values: [Double]
+
+    func path(in rect: CGRect) -> Path {
+        var path = Sparkline(values: values).path(in: rect)
+        guard !path.isEmpty else { return path }
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 extension Asset {
     /// Deterministic 24h sample series that ends in the direction of `change24h`.
     var sparkline: [Double] {
