@@ -12,12 +12,7 @@ struct ProfileView: View {
         NavigationStack {
             List {
                 Section {
-                    ProfileCard().listRowBackground(Color.clear)
-                }
-                Section("Social") {
-                    row("Friends", "person.2") { FriendsView() }
-                        .badge(SocialStore.shared.requests.count)
-                    row("Leaderboard", "trophy") { LeaderboardView() }
+                    ProfileHeader().listRowBackground(Color.clear)
                 }
                 Section("Account") {
                     row("Personal info", "person") { PersonalInfoView() }
@@ -63,21 +58,6 @@ struct ProfileView: View {
                 Button("Sign out", role: .destructive) { Haptics.success() }
             }
         }
-    }
-
-    private var header: some View {
-        VStack(spacing: Space.sm) {
-            Text(String(SampleData.profile.name.prefix(1)))
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(Theme.textPrimary)
-                .frame(width: 84, height: 84)
-                .glassEffect(.regular, in: Circle())
-            VStack(spacing: 2) {
-                Text(SampleData.profile.name).titleStyle().foregroundStyle(Theme.textPrimary)
-                Text(SampleData.profile.handle).font(Typo.callout).foregroundStyle(Theme.textSecondary)
-            }
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private func row(_ title: String, _ icon: String) -> some View {
