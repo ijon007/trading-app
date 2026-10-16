@@ -80,6 +80,36 @@ struct PnLText: View {
     }
 }
 
+/// Up to three overlapping coin icons, plus a dark "N+" circle for the rest.
+struct CoinStack: View {
+    let symbols: [String]
+    var total: Int? = nil
+    var size: CGFloat = 22
+
+    private var extra: Int { max((total ?? symbols.count) - min(symbols.count, 3), 0) }
+
+    var body: some View {
+        HStack(spacing: -size * 0.3) {
+            ForEach(Array(symbols.prefix(3).enumerated()), id: \.element) { i, symbol in
+                CoinIcon(symbol: symbol, size: size)
+                    .background(Circle().stroke(Theme.background, lineWidth: 2))
+                    .zIndex(Double(3 - i))
+            }
+            if extra > 0 {
+                Text("\(extra)+")
+                    .font(.system(size: size * 0.4, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.85))
+                    .minimumScaleFactor(0.6)
+                    .frame(width: size, height: size)
+                    .background(Circle().fill(Color(white: 0.14)))
+                    .background(Circle().stroke(Theme.background, lineWidth: 2))
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Holds \(symbols.prefix(3).joined(separator: ", "))\(extra > 0 ? " and \(extra) more" : "")")
+    }
+}
+
 /// Follow / Following toggle.
 struct FollowButton: View {
     let id: String

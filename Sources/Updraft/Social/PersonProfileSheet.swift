@@ -36,6 +36,9 @@ struct PersonProfileSheet: View {
                             .animation(.snappy, value: period)
                         ReturnText(value: profile.returnFor(period), font: Typo.caption)
                             .animation(.snappy, value: period)
+                        if !profile.hidesHoldings, !profile.topHoldings.isEmpty {
+                            CoinStack(symbols: profile.topHoldings.map(\.symbol), total: profile.holdingCount)
+                        }
                         Spacer()
                         if let rank = store.board(period).first(where: { $0.id == profile.id })?.rank {
                             Text("#\(rank) in your board")

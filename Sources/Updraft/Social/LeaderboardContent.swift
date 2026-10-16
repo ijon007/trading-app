@@ -137,8 +137,13 @@ struct LeaderboardContent: View {
             }
             Spacer()
             RankChange(change: entry.change)
-            PnLText(value: entry.profile.pnlFor(period), font: Typo.headline)
-                .frame(minWidth: 64, alignment: .trailing)
+            VStack(alignment: .trailing, spacing: Space.xxs) {
+                PnLText(value: entry.profile.pnlFor(period), font: Typo.headline)
+                if !entry.profile.hidesHoldings, !entry.profile.topHoldings.isEmpty {
+                    CoinStack(symbols: entry.profile.topHoldings.map(\.symbol), total: entry.profile.holdingCount)
+                }
+            }
+            .frame(minWidth: 64, alignment: .trailing)
         }
         .padding(.vertical, Space.sm)
         .padding(.horizontal, Space.sm)
