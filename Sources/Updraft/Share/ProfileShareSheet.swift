@@ -17,6 +17,8 @@ struct ProfileShareSheet: View {
     @State private var rendered: UIImage?
     @State private var feedback: String?
     @State private var height: CGFloat = 520
+    /// Card side: screen width minus the standard 16pt margins.
+    private var side: CGFloat { UIScreen.main.bounds.width - 2 * Space.md }
 
     var body: some View {
         VStack(spacing: Space.md) {
@@ -28,15 +30,21 @@ struct ProfileShareSheet: View {
                 .animation(.snappy, value: page)
                 .padding(.top, Space.lg)
 
+            // Edge to edge so pages don't clip the card; each page insets the
+            // card 16pt and leaves room below for its shadow.
             TabView(selection: $page) {
                 ForEach(Kind.allCases) { kind in
-                    ShareCard(kind: kind, hideAmounts: privacyOn)
+                    ShareCard(kind: kind, hideAmounts: privacyOn, side: side)
                         .shadow(color: .black.opacity(0.08), radius: 16, y: 6)
+                        .padding(.horizontal, Space.md)
+                        .padding(.top, Space.xs)
+                        .padding(.bottom, Space.lg)
                         .tag(kind)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: ShareCard.size.height + Space.md)
+            .frame(height: side + Space.xs + Space.lg)
+            .padding(.horizontal, -Space.md)
 
             HStack(spacing: Space.xs) {
                 ForEach(Kind.allCases) { kind in
@@ -103,9 +111,7 @@ struct ProfileShareSheet: View {
 
     private func render() {
         let renderer = ImageRenderer(content:
-            ShareCard(kind: page, hideAmounts: privacyOn)
-                .padding(Space.lg)
-                .background(Theme.background)
+            ShareCard(kind: page, hideAmounts: privacyOn, side: side, export: true)
                 .environment(\.colorScheme, scheme))
         renderer.scale = max(displayScale, 3)
         rendered = renderer.uiImage
@@ -158,7 +164,10 @@ struct ProfileShareSheet: View {
 struct ShareCard: View {
     let kind: ProfileShareSheet.Kind
     var hideAmounts = false
-    static let size = CGSize(width: 300, height: 300)
+    /// Square side in points.
+    var side: CGFloat = 343
+    /// Export: fill the whole square, no rounded corners or border.
+    var export = false
     private var store: SocialStore { .shared }
 
     var body: some View {
@@ -172,9 +181,11 @@ struct ShareCard: View {
             Spacer(minLength: 0)
         }
         .padding(Space.lg)
-        .frame(width: Self.size.width, height: Self.size.height, alignment: .topLeading)
-        .background(Theme.surface, in: .rect(cornerRadius: Radius.xl))
-        .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Theme.hairline, lineWidth: 1))
+        .frame(width: side, height: side, alignment: .topLeading)
+        .background(Theme.surface, in: .rect(cornerRadius: export ? 0 : Radius.xl))
+        .overlay {
+            if !export { RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Theme.hairline, lineWidth: 1) }
+        }
     }
 
     private var header: some View {
