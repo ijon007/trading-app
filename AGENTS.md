@@ -23,7 +23,7 @@ Native SwiftUI iOS crypto wallet. It's built on Windows + WSL Ubuntu with **xtoo
 | `CoinDetail/` | The coin sheet: chart, timeframes, stats, and the watchlist star |
 | `Trade/`, `Transfer/` | Buy and sell, plus Send, Receive, Swap, internal transfers, and `HoldToConfirm` |
 | `Accounts/` | Add-account sheet (Create / Import / Watch), wallet creation with phrase backup, and the empty state |
-| `Share/` | The P&L share card |
+| `Share/` | `PnLCard.swift` (the card, plus `UpdraftLogoShape`, the traced logo stripes) and `PnLShareSheet.swift` (timeframe, light/dark and hide-amounts options; `ImageRenderer` + `ShareLink`) |
 | `Profile/` | Settings, Face ID, passcode, appearance |
 | `Onboarding/` | First-run flow |
 | `Components/` | Shared pieces: `PrivacyMode`, `AppLock`, `Sparkline`, `CoinIcon`, `Dropdown`, and so on |
@@ -42,13 +42,19 @@ Native SwiftUI iOS crypto wallet. It's built on Windows + WSL Ubuntu with **xtoo
 - Buying, selling and sending are UI only right now, and nothing goes on-chain.
 
 ## Design rules
-- Always use `Theme`, `Space`, `Radius` and the `Typography` styles. Never use raw colors, magic numbers or system fonts directly.
-- Keep it grayscale. Color only means something: green for up, red for down. Charts get a gradient area fill (22% opacity at the top, fading to clear).
-- Follow Apple's design guidelines, use native components first, and add subtle spring animations and haptics on actions.
-- Keep spacing tight. Sheets and drawers size themselves to their content (content-height detent), so there's no dead space.
-- Wrap every money amount in privacy mode (the `PrivacyMode` modifier). Percentages stay visible.
-- Keep it simple: no extra screens or flows when a row, swipe or drawer will do. Default timeframe is **1H** everywhere.
-- Check on a real phone before calling UI done.
+- **Tokens:** every color, spacing, radius and font comes from `Theme`, `Space`, `Radius` and `Typo`. Match how existing screens style the same thing before inventing a new style. No raw hex colors or magic numbers.
+- **Color:** grayscale. Color only means something: `Theme.positive` for up, `Theme.negative` for down. Charts get a gradient area fill (22% opacity at the top, fading to clear).
+- **Liquid Glass sparingly:** only on floating or interactive controls (glass buttons via `GlassButton.swift`, the account pill, bottom action bars). Content cards use `Theme.surface`, not glass.
+- **Native first:** use native components, but for choosing between options inside a sheet use the custom `Components/Dropdown.swift` instead of a native `Menu`.
+- **No all-caps labels** (don't use `.eyebrow()`, which uppercases) and **no tile backgrounds behind icons**: icons sit bare.
+- **Dismissal:** tapping empty space dismisses the keyboard (`KeyboardDismissal`, installed once on the window) and closes drawers.
+- **Sheets fit their content:** measure the content and use a `.height` detent (see `AddAccountSheet`), so nothing clips and there's no dead space. Keep spacing tight.
+- **Defaults:** charts open on **1H** (Home and coin detail). The P&L share card opens on **1D**.
+- **Empty states:** an account with no assets hides the balance chart and change, and shows `EmptyAccountView` (bare symbol, one line, one action).
+- **Privacy:** wrap every money amount in `.privateAmount()` (`PrivacyMode`, stored under `privacy.hideAmounts`). Percentages stay visible.
+- **Motion and haptics:** subtle springs that can be interrupted, and haptics per the conventions in `Theme/Haptics.swift`.
+- Keep it simple: no extra screens or flows when a row, swipe or drawer will do.
+- Don't restyle UI Jon has approved unless asked. Check edge cases (empty, long text, keyboard, privacy on) on a real phone before calling UI done.
 
 ## Working rules
 - Make small, focused commits, one per change, with clear messages. Commit as you go.
