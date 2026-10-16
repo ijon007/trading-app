@@ -256,8 +256,17 @@ final class SocialStore {
     func board(_ period: LeaderPeriod) -> [Ranked] {
         // Private (no public accounts): you're left off the board.
         let all = (hasPublicAccounts ? [meWithStats] : []) + followingPeople
-        let now = all.sorted { $0.returnFor(period) > $1.returnFor(period) }
-        let before = all.sorted { ($0.previousReturns[period] ?? 0) > ($1.previousReturns[period] ?? 0) }
+        // Strictly by return; ties fall back to name, then id, so order never flickers.
+        func ordered(_ value: (SocialProfile) -> Double) -> [SocialProfile] {
+            all.sorted { a, b in
+                let va = value(a), vb = value(b)
+                if va != vb { return va > vb }
+                if a.name != b.name { return a.name < b.name }
+                return a.id < b.id
+            }
+        }
+        let now = ordered { $0.returnFor(period) }
+        let before = ordered { $0.previousReturns[period] ?? $0.returnFor(period) }
         return now.enumerated().map { i, p in
             let prev = before.firstIndex { $0.id == p.id } ?? i
             return Ranked(rank: i + 1, change: prev - i, profile: p, isMe: p.id == me.id)

@@ -40,6 +40,13 @@ struct LeaderboardContent: View {
                 ForEach(board.dropFirst(min(3, board.count))) { row($0) }
             }
             .animation(.spring(duration: 0.45, bounce: 0.15), value: board.map(\.id))
+
+            if !store.hasPublicAccounts {
+                Label("Your accounts are private, so you're not on the board.", systemImage: "lock")
+                    .font(Typo.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
         .sensoryFeedback(.selection, trigger: period)
         .onChange(of: period) { replay() }
@@ -55,24 +62,33 @@ struct LeaderboardContent: View {
 
     // MARK: Podium
 
+    /// Fixed slots: #2 left (medium), #1 center (tallest), #3 right (shortest).
     private func podium(_ top: [SocialStore.Ranked]) -> some View {
-        let order = [1, 0, 2].compactMap { top.indices.contains($0) ? top[$0] : nil } // 2nd, 1st, 3rd
-        return HStack(alignment: .bottom, spacing: Space.sm) {
-            ForEach(Array(order.enumerated()), id: \.element.id) { i, entry in
-                column(entry, height: [92, 120, 72][entry.rank - 1], delay: Double(i) * 0.06)
+        HStack(alignment: .bottom, spacing: Space.sm) {
+            ForEach([1, 0, 2], id: \.self) { index in
+                if top.indices.contains(index) {
+                    let entry = top[index]
+                    column(entry, place: index).id(entry.id)
+                } else {
+                    Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                }
             }
         }
-        .padding(.top, Space.lg)
+        .padding(.top, Space.xl)
     }
 
-    private func column(_ entry: SocialStore.Ranked, height: CGFloat, delay: Double) -> some View {
-        VStack(spacing: Space.xs) {
-            SocialAvatar(photo: store.photo(for: entry.profile), size: entry.rank == 1 ? 60 : 48)
+    /// place: 0 = first, 1 = second, 2 = third (by position, so ties still fit the podium).
+    private func column(_ entry: SocialStore.Ranked, place: Int) -> some View {
+        let height: CGFloat = [124, 96, 72][place]
+        let avatar: CGFloat = [64, 52, 46][place]
+        let delay = [0.1, 0.0, 0.18][place] // 2nd, then 1st, then 3rd
+        return VStack(spacing: Space.xs) {
+            SocialAvatar(photo: store.photo(for: entry.profile), size: avatar)
                 .overlay {
                     if entry.isMe { Circle().strokeBorder(Theme.accent, lineWidth: 2).padding(-4) }
                 }
                 .overlay(alignment: .top) {
-                    if entry.rank == 1 {
+                    if place == 0 {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(Theme.textPrimary)
