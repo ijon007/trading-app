@@ -12,14 +12,16 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             List {
-                // As a section header, not a row: rows are clipped to the rounded
-                // section shape, which cut off the glass buttons. Zero insets keep
-                // its edges on the cards' edges.
-                Section {} header: {
+                // A real row, not a section header: List doesn't deliver taps to
+                // controls in a section header, so Share/Followers/Following/Edit
+                // did nothing. Zero side insets keep its edges on the cards'
+                // edges; the banner's rounded top matches the section corners and
+                // the small bottom inset keeps the Edit capsule clear of them.
+                Section {
                     ProfileHeader(sheet: $headerSheet)
-                        .textCase(nil)
-                        .listRowInsets(EdgeInsets())
-                        .padding(.bottom, Space.xs)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: Space.xs, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
                 .listSectionSpacing(Space.xs)
                 Section("Account") {

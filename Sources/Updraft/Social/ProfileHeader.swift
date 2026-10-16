@@ -3,9 +3,8 @@ import SwiftUI
 /// Profile header, left-aligned: photo, name, @handle, bio, follower counts,
 /// Edit profile. Share sits top-right.
 struct ProfileHeader: View {
-    /// Sheets this header opens. Presented by the owning screen, not here: the
-    /// header lives in a List section header, which doesn't reliably host
-    /// presentations (the share drawer never appeared).
+    /// Sheets this header opens, presented by the owning screen with one
+    /// `.sheet(item:)` so the header's buttons only set state.
     enum Sheet: String, Identifiable {
         case edit, followers, following, share
         var id: String { rawValue }
