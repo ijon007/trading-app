@@ -71,7 +71,7 @@ struct SwapSheet: View {
         }
         .sensoryFeedback(.selection, trigger: from)
         .sensoryFeedback(.selection, trigger: to)
-        .presentationDetents([.inset])
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
     }
 
