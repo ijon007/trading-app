@@ -30,22 +30,29 @@ struct PersonProfileSheet: View {
                 }
                 .staggered(0)
 
-                VStack(alignment: .leading, spacing: Space.sm) {
-                    HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: Space.md) {
+                    // 1. The number: dollar P&L, % beneath.
+                    VStack(alignment: .leading, spacing: Space.xxs) {
                         PnLText(value: profile.pnlFor(period), font: Typo.numeral)
-                            .animation(.snappy, value: period)
-                        ReturnText(value: profile.returnFor(period), font: Typo.caption)
-                            .animation(.snappy, value: period)
+                        ReturnText(value: profile.returnFor(period), font: Typo.callout)
+                    }
+                    .animation(.snappy, value: period)
+                    // 2. Supporting stats, each its own labelled item.
+                    HStack(alignment: .top, spacing: Space.lg) {
                         if !profile.hidesHoldings, !profile.topHoldings.isEmpty {
-                            CoinStack(symbols: profile.topHoldings.map(\.symbol), total: profile.holdingCount)
+                            stat("Holds") {
+                                CoinStack(symbols: profile.topHoldings.map(\.symbol), total: profile.holdingCount)
+                            }
                         }
-                        Spacer()
                         if let rank = store.board(period).first(where: { $0.id == profile.id })?.rank {
-                            Text("#\(rank) in your board")
-                                .font(Typo.caption).foregroundStyle(Theme.textSecondary)
-                                .contentTransition(.numericText(value: Double(rank)))
-                                .animation(.snappy, value: rank)
+                            stat("Rank") {
+                                Text("#\(rank)")
+                                    .font(Typo.headline).foregroundStyle(Theme.textPrimary)
+                                    .contentTransition(.numericText(value: Double(rank)))
+                                    .animation(.snappy, value: rank)
+                            }
                         }
+                        Spacer(minLength: 0)
                     }
                     chart
                     Picker("Period", selection: $period) {
@@ -65,6 +72,13 @@ struct PersonProfileSheet: View {
         .sensoryFeedback(.selection, trigger: period)
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+
+    private func stat(_ label: String, @ViewBuilder _ content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text(label).font(Typo.caption).foregroundStyle(Theme.textSecondary)
+            content().frame(height: 22, alignment: .leading)
+        }
     }
 
     /// Account value line (same chart as Home), tinted by the period's return.
